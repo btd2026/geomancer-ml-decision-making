@@ -25,6 +25,7 @@ This repository contains tools for creating and managing interactive Weights & B
 
 - [Quick Start](#quick-start)
 - [Project Structure](#project-structure)
+- [Data Storage](#data-storage)
 - [Development Setup](#development-setup)
 - [Key Components](#key-components)
 - [ManyLatents Integration](#manylatents-integration)
@@ -123,6 +124,112 @@ geomancer-llm-decision-making/
 ├── models/                       # Trained ML models (if any)
 └── logs/                         # Execution logs
 ```
+
+---
+
+## Data Storage
+
+All data generated or processed by this project is stored in a centralized location on the NFS share.
+
+### Primary Data Directory
+
+```
+/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/
+```
+
+### Directory Structure
+
+| Subdirectory | Contents |
+|--------------|----------|
+| `subsampled/` | Input H5AD files (101 datasets, ≤50K cells each) |
+| `processed/` | Original full-size H5AD files from CELLxGENE |
+| `manylatents_outputs/` | Algorithm execution results (embeddings, plots, metrics) |
+| `logs/` | SLURM job logs (stdout/stderr) |
+
+### Input Data (`subsampled/`)
+
+Contains the H5AD files used as input for benchmarking:
+
+```bash
+/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/subsampled/
+├── A_Single_Cell_Atlas_of_Mouse_White_Adipose_Tissue_a2da8d7b.h5ad
+├── Blood_d86edd6a.h5ad
+├── ...
+└── (101 total files)
+```
+
+Each file contains:
+- Cell × gene matrix (≤50,000 cells)
+- Cell metadata (tissue type, organism, etc.)
+- Gene names and coordinates
+
+### Output Data (`manylatents_outputs/`)
+
+Contains results from algorithm runs:
+
+```bash
+/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/manylatents_outputs/
+├── Blood_d86edd6a/
+│   ├── phate_Blood_d86edd6a.csv      # 2D embeddings
+│   ├── phate_Blood_d86edd6a.png      # Scatter plot visualization
+│   ├── metrics.yaml                  # Quality metrics (TSA, LID, etc.)
+│   └── .hydra/                       # Config backup
+└── (101 total experiment outputs)
+```
+
+### Logs (`logs/`)
+
+SLURM job execution logs:
+
+```bash
+/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/logs/
+├── phate_<JOBID>_<ARRAY_ID>.out      # Standard output
+├── phate_<JOBID>_<ARRAY_ID>.err      # Standard error
+└── run_results.yaml                  # Summary of all runs
+```
+
+### Accessing the Data
+
+From scripts, the data paths are defined as:
+
+```python
+# In scripts/utilities/generate_manylatents_configs.py
+DATA_DIR = Path("/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/subsampled")
+OUTPUT_BASE = Path("/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/manylatents_outputs")
+```
+
+To use a different data location, modify these paths or use command-line arguments:
+
+```bash
+# Specify custom data directory
+python3 scripts/utilities/generate_manylatents_configs.py \
+    --data-dir /custom/path/to/h5ad/files
+```
+
+### Data Flow
+
+```
+CELLxGENE Census
+    ↓ (download)
+processed/ (full-size H5AD)
+    ↓ (subsample to 50K cells)
+subsampled/ (input for algorithms)
+    ↓ (manylatents execution)
+manylatents_outputs/ (embeddings, plots, metrics)
+    ↓ (gallery creation)
+wandb_gallery_replit/ (interactive visualization)
+```
+
+### Storage Requirements
+
+| Directory | Approximate Size | Notes |
+|-----------|------------------|-------|
+| `processed/` | ~50 GB | Full datasets (not actively used) |
+| `subsampled/` | ~5 GB | Working datasets (50K cells each) |
+| `manylatents_outputs/` | ~2 GB | Results per run (CSV + PNG + YAML) |
+| `logs/` | ~100 MB | SLURM job logs |
+
+**Note**: The NFS share is mounted on the HPC cluster. Local development may require adjusting paths or symlinking to local storage.
 
 ---
 
