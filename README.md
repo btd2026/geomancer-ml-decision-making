@@ -27,6 +27,7 @@ This repository contains tools for creating and managing interactive Weights & B
 - [Project Structure](#project-structure)
 - [Development Setup](#development-setup)
 - [Key Components](#key-components)
+- [ManyLatents Integration](#manylatents-integration)
 - [Extending the Project](#extending-the-project)
 - [Contributing](#contributing)
 - [Configuration](#configuration)
@@ -224,9 +225,216 @@ def show_your_page():
 
 ---
 
+## ManyLatents Integration
+
+This project uses the **ManyLatents** framework for running dimensionality reduction algorithms. ManyLatents is a separate repository that provides a unified interface for benchmarking algorithms like PHATE, UMAP, t-SNE, and PCA.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Geomancer Repository                         │
+│  (this repo - config generation, orchestration, visualization) │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             │ Calls ManyLatents via subprocess
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    ManyLatents Repository                       │
+│  (/home/btd8/manylatents/ - algorithm implementations)          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Directory Structure
+
+| Location | Purpose |
+|----------|---------|
+| `/home/btd8/manylatents/` | ManyLatents framework (separate repo) |
+| `/home/btd8/manylatents/cellxgene_experiments.yaml` | Master list of experiments |
+| `/home/btd8/manylatents/manylatents/configs/experiment/cellxgene/` | Individual experiment configs |
+| `/home/btd8/manylatents/manylatents/configs/data/cellxgene_dataset.yaml` | Data source config |
+| `scripts/utilities/generate_manylatents_configs.py` | Config generator script |
+| `slurm_jobs/run_manylatents_array.slurm` | SLURM array job script |
+| `scripts/benchmarking/run_all_manylatents.py` | Python sequential runner |
+
+### Workflow
+
+```
+1. Generate Configs
+   └─> scripts/utilities/generate_manylatents_configs.py
+       └─> Creates 101 experiment YAML files
+       └─> Creates master list: cellxgene_experiments.yaml
+
+2. Run Experiments
+   └─> Option A: slurm_jobs/run_manylatents_array.slurm (HPC/cluster)
+   └─> Option B: scripts/benchmarking/run_all_manylatents.py (local/sequential)
+       └─> Calls: python3 -m manylatents.main experiment=cellxgene/<config_name>
+
+3. Collect Results
+   └─> Outputs saved to: /nfs/.../manylatents_outputs/<dataset_name>/
+       ├── phate_<name>.csv      # Embeddings
+       ├── phate_<name>.png      # Visualization
+       └── metrics.yaml          # Quality metrics
+```
+
+### Config File Format
+
+Each experiment config is a Hydra YAML file:
+
+```yaml
+# @package _global_
+name: phate_<dataset_name>
+
+defaults:
+  - override /algorithms/latent: phate      # Algorithm selection
+  - override /data: cellxgene_dataset       # Data source
+  - override /callbacks/embedding: default  # Output callbacks
+  - override /metrics: test_metric          # Evaluation metrics
+
+seed: 42
+project: cellxgene_phate
+
+data:
+  adata_path: /path/to/dataset.h5ad
+  label_key: None
+
+algorithms:
+  latent:
+    n_components: 2        # Output dimensions
+    # knn: 5              # PHATE-specific params
+    # decay: 40
+    # t: "auto"
+```
+
+### Generating Configs
+
+To generate new experiment configs for H5AD files:
+
+```bash
+# Activate the ManyLatents environment
+cd /home/btd8/manylatents
+source .venv/bin/activate
+
+# Generate configs for all H5AD files in a directory
+python3 /path/to/geomancer/scripts/utilities/generate_manylatents_configs.py \
+    --data-dir /path/to/h5ad/files
+```
+
+**Output:**
+- Individual configs in `/home/btd8/manylatents/manylatents/configs/experiment/cellxgene/`
+- Master list at `/home/btd8/manylatents/cellxgene_experiments.yaml`
+
+### Running Experiments
+
+#### Option 1: SLURM Array Job (HPC Cluster)
+
+```bash
+# From the geomancer repository
+sbatch slurm_jobs/run_manylatents_array.slurm
+
+# Monitor progress
+squeue -u $USER
+tail -f /nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/logs/phate_*.out
+```
+
+The SLURM script (`slurm_jobs/run_manylatents_array.slurm`):
+- Reads the master experiment list
+- Runs experiments in parallel (configurable via `--array`)
+- Calls ManyLatents: `python3 -m manylatents.main experiment=cellxgene/<name>`
+
+#### Option 2: Python Sequential Runner
+
+```bash
+# Run a subset for testing
+python3 scripts/benchmarking/run_all_manylatents.py --start 0 --end 5 --verbose
+
+# Run all experiments sequentially
+python3 scripts/benchmarking/run_all_manylatents.py --verbose
+
+# Run with parallel workers
+python3 scripts/benchmarking/run_all_manylatents.py --parallel 4
+```
+
+#### Option 3: Run Single Experiment
+
+```bash
+cd /home/btd8/manylatents
+source .venv/bin/activate
+
+python3 -m manylatents.main \
+    experiment=cellxgene/Blood_d86edd6a \
+    logger=none \
+    hydra.run.dir=/output/path/Blood_d86edd6a
+```
+
+### Adding a New Algorithm to ManyLatents
+
+To benchmark a new algorithm:
+
+1. **Add algorithm implementation** in the ManyLatents repo:
+   ```bash
+   cd /home/btd8/manylatents
+   # Add your algorithm to manylatents/algorithms/latent/
+   ```
+
+2. **Create algorithm config** in ManyLatents:
+   ```yaml
+   # /home/btd8/manylatents/manylatents/configs/algorithms/latent/your_algo.yaml
+   # @package algorithms/latent
+   _target_: manylatents.algorithms.latent.your_algo.YourAlgoModule
+   n_components: 2
+   # Add algorithm-specific parameters
+   ```
+
+3. **Update experiment generator** to use your algorithm:
+   ```python
+   # In scripts/utilities/generate_manylatents_configs.py
+   f.write("  - override /algorithms/latent: your_algo\n")  # Changed from phate
+   ```
+
+4. **Regenerate and run**:
+   ```bash
+   python3 scripts/utilities/generate_manylatents_configs.py
+   sbatch slurm_jobs/run_manylatents_array.slurm
+   ```
+
+### Output Structure
+
+Each experiment produces:
+
+```
+<nfs_output_dir>/<experiment_name>/
+├── <algo>_<name>.csv           # Embeddings (PHATE1, PHATE2, labels)
+├── <algo>_<name>.png           # 2D scatter plot
+├── metrics.yaml                # Quality metrics
+└── .hydra/
+    ├── config.yaml             # Full config used
+    └── hydra.yaml              # Hydra metadata
+```
+
+### Customization Paths
+
+| What to Change | File Location |
+|----------------|---------------|
+| Algorithm parameters | Individual experiment configs |
+| Data source | `/home/btd8/manylatents/manylatents/configs/data/cellxgene_dataset.yaml` |
+| Output directory | SLURM script or Python runner |
+| Memory/CPU limits | `slurm_jobs/run_manylatents_array.slurm` |
+| Algorithm selection | Config generator script |
+
+### Important Notes
+
+- **ManyLatents is a separate repository** at `/home/btd8/manylatents/`
+- **Configs live in ManyLatents**, not in this repository
+- **This repository generates configs** and **calls ManyLatents** via subprocess
+- **Hydra is used** for configuration management (`experiment=cellxgene/<name>` syntax)
+- See `docs/MANYLATENTS_SETUP.md` for more detailed documentation
+
+---
+
 ## Extending the Project
 
-### Adding a New Algorithm
+### Adding a New Algorithm (via ManyLatents)
 
 To add a new dimensionality reduction algorithm:
 
