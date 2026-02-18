@@ -44,8 +44,8 @@ This repository contains tools for creating and managing interactive Weights & B
 
 ```bash
 # Clone the repository
-git clone https://github.com/btd8/geomancer-llm-decision-making.git
-cd geomancer-llm-decision-making
+git clone https://github.com/btd8/geomancer-ml-decision-making.git
+cd geomancer-ml-decision-making
 
 # Install dependencies
 pip install -r requirements.txt
@@ -93,7 +93,7 @@ python standalone_server.py
 ## Project Structure
 
 ```
-geomancer-llm-decision-making/
+geomancer-ml-decision-making/
 ├── streamlit_app.py              # Main Streamlit dashboard
 ├── wandb_multiselect_gallery.html # Standalone HTML gallery
 │
@@ -239,8 +239,8 @@ wandb_gallery_replit/ (interactive visualization)
 
 1. **Fork and clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/geomancer-llm-decision-making.git
-   cd geomancer-llm-decision-making
+   git clone https://github.com/YOUR_USERNAME/geomancer-ml-decision-making.git
+   cd geomancer-ml-decision-making
    ```
 
 2. **Create a virtual environment:**
@@ -907,7 +907,7 @@ tail -f logs/extract_labels_*.log
 ### Import Errors
 ```bash
 # Ensure you're in the project root
-cd geomancer-llm-decision-making
+cd geomancer-ml-decision-making
 
 # Reinstall dependencies
 pip install -r requirements.txt --force-reinstall
