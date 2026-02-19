@@ -14,9 +14,11 @@ This repository contains tools for creating and managing interactive Weights & B
 
 **Current Status (February 2025):**
 - Interactive WandB gallery with 404 PHATE embedding runs
-- 101 datasets from CELLxGENE Census (subsampled to 50K cells each)
+- 22 datasets from CELLxGENE Census (subsampled to 50K cells each)
+- 100+ additional small datasets available
 - 4 algorithms benchmarked: PCA, UMAP, t-SNE, PHATE
 - Label category extraction using Claude API
+- Centralized preprocessing pipeline for any data type
 - Streamlit app for interactive exploration
 
 ---
@@ -25,6 +27,7 @@ This repository contains tools for creating and managing interactive Weights & B
 
 - [Quick Start](#quick-start)
 - [Project Structure](#project-structure)
+- [Data Preprocessing](#data-preprocessing)
 - [Data Storage](#data-storage)
 - [Development Setup](#development-setup)
 - [Key Components](#key-components)
@@ -93,11 +96,29 @@ python standalone_server.py
 ## Project Structure
 
 ```
-geomancer-ml-decision-making/
+geomancer-llm-decision-making/
 ├── streamlit_app.py              # Main Streamlit dashboard
 ├── wandb_multiselect_gallery.html # Standalone HTML gallery
 │
 ├── scripts/                      # Analysis and utility scripts
+│   ├── pipeline/                 # SHARED pipeline infrastructure (algorithm-agnostic)
+│   │   ├── config_generator.py   # Generic config generation
+│   │   ├── slurm_template.py     # SLURM job template generator
+│   │   ├── experiment_runner.py  # Generic experiment execution
+│   │   ├── preprocessing.py      # Data preprocessing pipeline
+│   │   └── post_process.py       # Post-experiment metadata extraction
+│   │
+│   ├── algorithms/               # ALGORITHM-SPECIFIC implementations
+│   │   ├── base.py               # Base algorithm interface
+│   │   ├── registry.py           # Algorithm registry
+│   │   ├── phate/                # PHATE algorithm
+│   │   │   ├── config.py         # PHATE configuration
+│   │   │   ├── run.py            # PHATE runner
+│   │   │   └── slurm_job.slurm   # SLURM template
+│   │   ├── umap/                 # UMAP algorithm (to be added)
+│   │   ├── tsne/                 # t-SNE algorithm (to be added)
+│   │   └── reeb/                 # Reeb algorithm (to be added)
+│   │
 │   ├── benchmarking/             # Algorithm benchmarking scripts
 │   ├── classification/           # ML model training scripts
 │   ├── data_collection/          # CELLxGENE data download scripts
@@ -107,6 +128,9 @@ geomancer-ml-decision-making/
 │   ├── analysis/                 # Data analysis scripts
 │   ├── utilities/                # Helper utilities
 │   └── deprecated/               # Archived versions (do not use)
+│
+├── run_algorithm.py              # Main entry point for running algorithms
+├── preprocess.py                 # Convenience wrapper for preprocessing
 │
 ├── configs/                      # Configuration files
 │   ├── pipeline_config.yaml      # Main pipeline configuration
@@ -127,6 +151,58 @@ geomancer-ml-decision-making/
 
 ---
 
+## Data Preprocessing
+
+The repository includes a **centralized preprocessing pipeline** that handles all data preparation before running experiments. This ensures data is in a consistent format (H5AD) with proper metadata.
+
+### Quick Start
+
+```bash
+# Preprocess a directory of files
+python scripts/preprocess.py /path/to/raw_data -o /path/to/processed
+
+# Validate existing H5AD files
+python scripts/preprocess.py /path/to/h5ad_files --validate
+
+# Process with custom settings
+python scripts/preprocess.py /path/to/raw_data -o /path/to/processed \
+    --max-cells 10000 --report report.json
+```
+
+### Supported Input Formats
+
+| Format | Description | Example |
+|--------|-------------|---------|
+| H5AD | AnnData format (native) | `data.h5ad` |
+| CSV | Cell × gene matrix | `expression.csv` |
+| TSV/TXT | Tab-separated values | `data.txt` |
+| NPY | NumPy array | `data.npy` |
+| MTX | Matrix Market format | `matrix.mtx` |
+| 10x | 10x Genomics directory | `/path/to/10x/` |
+
+### Preprocessing Steps
+
+1. **Format Conversion** - Converts any supported format to H5AD
+2. **Metadata Validation** - Checks for required categorical columns
+3. **Quality Control** - Filters low-quality cells and genes
+4. **Subsampling** - Reduces large datasets to manageable size (default 50K cells)
+5. **Normalization** - Total count normalization + log transform
+6. **Label Suggestion** - Auto-detects best label key for visualization
+
+### Recommended Metadata Columns
+
+| Category | Column Names | Purpose |
+|----------|--------------|---------|
+| Condition | `disease`, `condition`, `status` | healthy/diseased, control/treatment |
+| Stages | `development_stage`, `stage`, `lineage` | developmental or disease stages |
+| Cell Type | `cell_type`, `celltype` | cell identity labels |
+| Time | `Day`, `timepoint`, `time` | longitudinal measurements |
+| Cluster | `cluster`, `leiden`, `louvain` | clustering annotations |
+
+For complete documentation, see **[docs/PREPROCESSING_PIPELINE.md](docs/PREPROCESSING_PIPELINE.md)**.
+
+---
+
 ## Data Storage
 
 All data generated or processed by this project is stored in a centralized location on the NFS share.
@@ -141,7 +217,8 @@ All data generated or processed by this project is stored in a centralized locat
 
 | Subdirectory | Contents |
 |--------------|----------|
-| `subsampled/` | Input H5AD files (101 datasets, ≤50K cells each) |
+| `subsampled/` | Input H5AD files (22 datasets, ≤50K cells each) |
+| `manylatents_small_datasets/` | Additional small datasets (100 files, ~3-5K cells each) |
 | `processed/` | Original full-size H5AD files from CELLxGENE |
 | `manylatents_outputs/` | Algorithm execution results (embeddings, plots, metrics) |
 | `logs/` | SLURM job logs (stdout/stderr) |
@@ -153,9 +230,11 @@ Contains the H5AD files used as input for benchmarking:
 ```bash
 /nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/subsampled/
 ├── A_Single_Cell_Atlas_of_Mouse_White_Adipose_Tissue_a2da8d7b.h5ad
+├── A__Balanced__Bone_Marrow_Reference_Map_of_Hematopo_cd2f23c1.h5ad
+├── Airway_edc8d3fe.h5ad
 ├── Blood_d86edd6a.h5ad
 ├── ...
-└── (101 total files)
+└── (22 total files)
 ```
 
 Each file contains:
@@ -209,13 +288,15 @@ python3 scripts/utilities/generate_manylatents_configs.py \
 ### Data Flow
 
 ```
-CELLxGENE Census
+CELLxGENE Census / Your Data
     ↓ (download)
 processed/ (full-size H5AD)
-    ↓ (subsample to 50K cells)
+    ↓ (preprocess: convert, validate, subsample, normalize)
 subsampled/ (input for algorithms)
     ↓ (manylatents execution)
 manylatents_outputs/ (embeddings, plots, metrics)
+    ↓ (post-process: extract metadata)
+plot_metadata.json (per-experiment metadata)
     ↓ (gallery creation)
 wandb_gallery_replit/ (interactive visualization)
 ```
@@ -336,53 +417,131 @@ def show_your_page():
 
 This project uses the **ManyLatents** framework for running dimensionality reduction algorithms. ManyLatents is a separate repository that provides a unified interface for benchmarking algorithms like PHATE, UMAP, t-SNE, and PCA.
 
+### New Algorithm-Agnostic Pipeline (2025)
+
+The codebase has been reorganized to make it easy to add new algorithms:
+
+```
+scripts/
+├── pipeline/                   # SHARED pipeline infrastructure
+│   ├── config_generator.py     # Generic config generation
+│   ├── slurm_template.py       # SLURM job template generator
+│   └── experiment_runner.py    # Generic experiment execution
+│
+├── algorithms/                 # ALGORITHM-SPECIFIC implementations
+│   ├── base.py                 # Base algorithm interface
+│   ├── registry.py             # Algorithm registry
+│   └── phate/                  # PHATE algorithm module
+│       ├── config.py           # PHATE configuration
+│       ├── run.py              # PHATE runner
+│       └── slurm_job.slurm     # SLURM template
+│
+└── run_algorithm.py            # Main entry point CLI
+```
+
+### Using the New Pipeline
+
+The unified CLI `run_algorithm.py` replaces the old algorithm-specific scripts:
+
+```bash
+# List available algorithms
+python scripts/run_algorithm.py --list
+
+# Generate configs for PHATE
+python scripts/run_algorithm.py phate generate-configs
+
+# Generate SLURM script
+python scripts/run_algorithm.py phate generate-slurm --n-jobs 100
+
+# Run experiments (local mode)
+python scripts/run_algorithm.py phate run --mode local --parallel 4
+
+# Show algorithm info
+python scripts/run_algorithm.py phate info
+```
+
 ### Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Geomancer Repository                         │
 │  (this repo - config generation, orchestration, visualization) │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             │ Calls ManyLatents via subprocess
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    ManyLatents Repository                       │
-│  (/home/btd8/manylatents/ - algorithm implementations)          │
+│                                                                 │
+│  ┌──────────────┐    ┌─────────────┐    ┌──────────────────┐  │
+│  │ algorithms/  │───▶│  pipeline/  │───▶│  ManyLatents     │  │
+│  │              │    │             │    │  (separate repo)  │  │
+│  │ - phate/     │    │ - config_   │    │                  │  │
+│  │ - umap/      │    │   gen       │    │ - hydra configs  │  │
+│  │ - tsne/      │    │ - slurm_    │    │ - algorithms     │  │
+│  │ - reeb/      │    │   template  │    │                  │  │
+│  └──────────────┘    └─────────────┘    └──────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Directory Structure
+### Adding a New Algorithm
+
+To add a new algorithm (e.g., Reeb, DSE, UMAP):
+
+1. **Create algorithm directory:**
+   ```bash
+   mkdir -p scripts/algorithms/your_algorithm
+   ```
+
+2. **Create `config.py`:**
+   ```python
+   from ..base import AlgorithmConfig
+
+   YOUR_ALGO_CONFIG = AlgorithmConfig(
+       name="Your Algorithm",
+       manylatents_key="your_algo",
+       description="Description of your algorithm",
+       default_params={
+           'n_components': 2,
+           # Add algorithm-specific params
+       },
+       resource_requirements={
+           'mem': '32G',
+           'cpus': 4,
+           'time': '4:00:00',
+           'partition': 'day',
+       },
+   )
+   ```
+
+3. **Create `__init__.py`:**
+   ```python
+   from .config import YOUR_ALGO_CONFIG
+
+   __all__ = ["YOUR_ALGO_CONFIG"]
+   ```
+
+4. **Register in `algorithms/registry.py`:**
+   ```python
+   try:
+       from .your_algorithm.config import YOUR_ALGO_CONFIG
+       register_algorithm(YOUR_ALGO_CONFIG)
+   except ImportError:
+       pass
+   ```
+
+5. **Use your algorithm:**
+   ```bash
+   python scripts/run_algorithm.py your_algo generate-configs
+   python scripts/run_algorithm.py your_algo run --mode slurm
+   ```
+
+See **[docs/ADD_ALGORITHM_GUIDE.md](docs/ADD_ALGORITHM_GUIDE.md)** for detailed instructions.
+
+### Legacy Documentation
+
+The old workflow (still functional but deprecated):
 
 | Location | Purpose |
 |----------|---------|
 | `/home/btd8/manylatents/` | ManyLatents framework (separate repo) |
-| `/home/btd8/manylatents/cellxgene_experiments.yaml` | Master list of experiments |
-| `/home/btd8/manylatents/manylatents/configs/experiment/cellxgene/` | Individual experiment configs |
-| `/home/btd8/manylatents/manylatents/configs/data/cellxgene_dataset.yaml` | Data source config |
-| `scripts/utilities/generate_manylatents_configs.py` | Config generator script |
-| `slurm_jobs/run_manylatents_array.slurm` | SLURM array job script |
-| `scripts/benchmarking/run_all_manylatents.py` | Python sequential runner |
-
-### Workflow
-
-```
-1. Generate Configs
-   └─> scripts/utilities/generate_manylatents_configs.py
-       └─> Creates 101 experiment YAML files
-       └─> Creates master list: cellxgene_experiments.yaml
-
-2. Run Experiments
-   └─> Option A: slurm_jobs/run_manylatents_array.slurm (HPC/cluster)
-   └─> Option B: scripts/benchmarking/run_all_manylatents.py (local/sequential)
-       └─> Calls: python3 -m manylatents.main experiment=cellxgene/<config_name>
-
-3. Collect Results
-   └─> Outputs saved to: /nfs/.../manylatents_outputs/<dataset_name>/
-       ├── phate_<name>.csv      # Embeddings
-       ├── phate_<name>.png      # Visualization
-       └── metrics.yaml          # Quality metrics
-```
+| `scripts/deprecated/generate_manylatents_configs.py` | Old config generator |
+| `scripts/deprecated/run_phate_small_datasets.py` | Old PHATE runner |
+| `slurm_jobs/run_manylatents_array.slurm` | Old SLURM script (PHATE-specific) |
 
 ### Config File Format
 
@@ -408,102 +567,7 @@ data:
 algorithms:
   latent:
     n_components: 2        # Output dimensions
-    # knn: 5              # PHATE-specific params
-    # decay: 40
-    # t: "auto"
 ```
-
-### Generating Configs
-
-To generate new experiment configs for H5AD files:
-
-```bash
-# Activate the ManyLatents environment
-cd /home/btd8/manylatents
-source .venv/bin/activate
-
-# Generate configs for all H5AD files in a directory
-python3 /path/to/geomancer/scripts/utilities/generate_manylatents_configs.py \
-    --data-dir /path/to/h5ad/files
-```
-
-**Output:**
-- Individual configs in `/home/btd8/manylatents/manylatents/configs/experiment/cellxgene/`
-- Master list at `/home/btd8/manylatents/cellxgene_experiments.yaml`
-
-### Running Experiments
-
-#### Option 1: SLURM Array Job (HPC Cluster)
-
-```bash
-# From the geomancer repository
-sbatch slurm_jobs/run_manylatents_array.slurm
-
-# Monitor progress
-squeue -u $USER
-tail -f /nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/logs/phate_*.out
-```
-
-The SLURM script (`slurm_jobs/run_manylatents_array.slurm`):
-- Reads the master experiment list
-- Runs experiments in parallel (configurable via `--array`)
-- Calls ManyLatents: `python3 -m manylatents.main experiment=cellxgene/<name>`
-
-#### Option 2: Python Sequential Runner
-
-```bash
-# Run a subset for testing
-python3 scripts/benchmarking/run_all_manylatents.py --start 0 --end 5 --verbose
-
-# Run all experiments sequentially
-python3 scripts/benchmarking/run_all_manylatents.py --verbose
-
-# Run with parallel workers
-python3 scripts/benchmarking/run_all_manylatents.py --parallel 4
-```
-
-#### Option 3: Run Single Experiment
-
-```bash
-cd /home/btd8/manylatents
-source .venv/bin/activate
-
-python3 -m manylatents.main \
-    experiment=cellxgene/Blood_d86edd6a \
-    logger=none \
-    hydra.run.dir=/output/path/Blood_d86edd6a
-```
-
-### Adding a New Algorithm to ManyLatents
-
-To benchmark a new algorithm:
-
-1. **Add algorithm implementation** in the ManyLatents repo:
-   ```bash
-   cd /home/btd8/manylatents
-   # Add your algorithm to manylatents/algorithms/latent/
-   ```
-
-2. **Create algorithm config** in ManyLatents:
-   ```yaml
-   # /home/btd8/manylatents/manylatents/configs/algorithms/latent/your_algo.yaml
-   # @package algorithms/latent
-   _target_: manylatents.algorithms.latent.your_algo.YourAlgoModule
-   n_components: 2
-   # Add algorithm-specific parameters
-   ```
-
-3. **Update experiment generator** to use your algorithm:
-   ```python
-   # In scripts/utilities/generate_manylatents_configs.py
-   f.write("  - override /algorithms/latent: your_algo\n")  # Changed from phate
-   ```
-
-4. **Regenerate and run**:
-   ```bash
-   python3 scripts/utilities/generate_manylatents_configs.py
-   sbatch slurm_jobs/run_manylatents_array.slurm
-   ```
 
 ### Output Structure
 
@@ -519,16 +583,6 @@ Each experiment produces:
     └── hydra.yaml              # Hydra metadata
 ```
 
-### Customization Paths
-
-| What to Change | File Location |
-|----------------|---------------|
-| Algorithm parameters | Individual experiment configs |
-| Data source | `/home/btd8/manylatents/manylatents/configs/data/cellxgene_dataset.yaml` |
-| Output directory | SLURM script or Python runner |
-| Memory/CPU limits | `slurm_jobs/run_manylatents_array.slurm` |
-| Algorithm selection | Config generator script |
-
 ### Important Notes
 
 - **ManyLatents is a separate repository** at `/home/btd8/manylatents/`
@@ -541,33 +595,29 @@ Each experiment produces:
 
 ## Extending the Project
 
-### Adding a New Algorithm (via ManyLatents)
+### Adding a New Algorithm
 
-To add a new dimensionality reduction algorithm:
+The reorganized pipeline makes adding new algorithms straightforward. See **[docs/ADD_ALGORITHM_GUIDE.md](docs/ADD_ALGORITHM_GUIDE.md)** for detailed instructions.
 
-1. **Add benchmarking script** in `scripts/benchmarking/`:
-   ```python
-   # scripts/benchmarking/run_your_algorithm.py
-   import scanpy as sc
-   import anndata
+**Quick start:**
+```bash
+# 1. Create algorithm directory
+mkdir -p scripts/algorithms/your_algo
 
-   def run_your_algorithm(adata: anndata.AnnData, **params):
-       """Run your algorithm on the data."""
-       # Your implementation here
-       embeddings = your_algorithm_func(adata.X, **params)
-       return embeddings
-   ```
+# 2. Create config.py with YOUR_ALGO_CONFIG
+# 3. Create __init__.py
+# 4. Register in algorithms/registry.py
 
-2. **Update the config** in `configs/pipeline_config.yaml`:
-   ```yaml
-   algorithms:
-     - name: your_algorithm
-       module: scripts.benchmarking.run_your_algorithm
-       default_params:
-         n_components: 50
-   ```
+# 5. Use it
+python scripts/run_algorithm.py your_algo generate-configs
+python scripts/run_algorithm.py your_algo run --mode slurm
+```
 
-3. **Add to the gallery** by updating the label extraction in `extract_label_categories.py`
+The new system handles:
+- Config generation for any algorithm
+- SLURM script generation with appropriate resources
+- Experiment execution (local or SLURM)
+- Metrics collection (algorithm-agnostic)
 
 ### Adding a New Data Source
 
@@ -830,6 +880,9 @@ docker run -p 8501:8501 geomancer-dashboard
 
 ## Documentation
 
+- **`docs/PREPROCESSING_PIPELINE.md`** - Complete preprocessing guide
+- **`docs/ADD_ALGORITHM_GUIDE.md`** - Add new algorithms to the pipeline
+- **`docs/SLURM_POST_PROCESSING.md`** - Metadata extraction after experiments
 - **`REPLIT_DEPLOYMENT_GUIDE.md`** - Deploy galleries to Replit
 - **`docs/ARCHITECTURE.md`** - System architecture
 - **`docs/CURRENT_STATUS.md`** - Project status updates

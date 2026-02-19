@@ -1,0 +1,182 @@
+#!/bin/bash
+#SBATCH --job-name=phate_cellxgene
+#SBATCH --output=/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/logs/phate_%A_%a.out
+#SBATCH --error=/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/logs/phate_%A_%a.err
+#SBATCH --array=0-100%15
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=32G
+#SBATCH --time=4:00:00
+#SBATCH --partition=day
+
+# Exit on error
+set -e
+
+# Create output and logs directories
+mkdir -p /nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/logs
+mkdir -p /nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/manylatents_outputs
+
+# Activate virtual environment
+export PATH="$HOME/.local/bin:$PATH"
+cd /home/btd8/manylatents
+source .venv/bin/activate
+
+# Read experiment list
+EXPERIMENT_LIST="/home/btd8/manylatents/phate_experiments.yaml"
+
+# Extract experiment name for this array task
+EXPERIMENT_NAME=$(python3 -c "
+import yaml
+import sys
+with open('${EXPERIMENT_LIST}', 'r') as f:
+    data = yaml.safe_load(f)
+    experiments = data['experiments']
+if ${SLURM_ARRAY_TASK_ID} < len(experiments):
+    print(experiments[${SLURM_ARRAY_TASK_ID}]['name'])
+else:
+    sys.exit(1)
+")
+
+if [ -z "$EXPERIMENT_NAME" ]; then
+    echo "Error: Could not find experiment for task ID ${SLURM_ARRAY_TASK_ID}"
+    exit 1
+fi
+
+echo "========================================="
+echo "Running experiment: ${EXPERIMENT_NAME}"
+echo "Task ID: ${SLURM_ARRAY_TASK_ID}"
+echo "Host: $(hostname)"
+echo "Date: $(date)"
+echo "========================================="
+
+OUTPUT_DIR="/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/manylatents_outputs/${EXPERIMENT_NAME}"
+
+# Run the experiment
+python3 -m manylatents.main \
+    experiment=cellxgene/${EXPERIMENT_NAME} \
+    logger=none \
+    hydra.run.dir=${OUTPUT_DIR}
+
+# Post-processing: Extract plot metadata (categories, colors, label_key)
+echo ""
+echo "Extracting plot metadata..."
+
+# Inline Python script for post-processing
+python3 << 'EOF'
+import json
+import sys
+import os
+
+# Try importing anndata
+try:
+    import anndata as ad
+except ImportError:
+    print("  Warning: anndata not available, skipping metadata extraction")
+    sys.exit(0)
+
+# Find the hydra config
+config_file = os.path.join('${OUTPUT_DIR}', '.hydra', 'config.yaml')
+
+if not os.path.exists(config_file):
+    print(f"  Warning: Config file not found: {config_file}")
+    sys.exit(0)
+
+# Try importing omegaconf
+try:
+    from omegaconf import OmegaConf
+except ImportError:
+    print("  Warning: omegaconf not available, skipping metadata extraction")
+    sys.exit(0)
+
+# Load config
+cfg = OmegaConf.load(config_file)
+
+# Get adata_path and label_key
+data_config = cfg.get('data', {})
+adata_path = None
+label_key = None
+
+if isinstance(data_config, dict):
+    adata_path = data_config.get('adata_path')
+    label_key = data_config.get('label_key')
+else:
+    adata_path = data_config.get('adata_path')
+    label_key = data_config.get('label_key')
+
+if not adata_path or not label_key:
+    print("  Warning: adata_path or label_key not found in config")
+    sys.exit(0)
+
+print(f"  adata_path: {adata_path}")
+print(f"  label_key: {label_key}")
+
+# Check if h5ad file exists
+if not os.path.exists(adata_path):
+    # Try fixing the path
+    if '/scratch/' in adata_path:
+        adata_path_fixed = adata_path.replace('/scratch/', '/shared/')
+        if os.path.exists(adata_path_fixed):
+            adata_path = adata_path_fixed
+
+if not os.path.exists(adata_path):
+    print(f"  Warning: h5ad file not found: {adata_path}")
+    sys.exit(0)
+
+# Load adata and extract metadata
+try:
+    adata = ad.read_h5ad(adata_path)
+except Exception as e:
+    print(f"  Warning: Could not load h5ad file: {e}")
+    sys.exit(0)
+
+if label_key not in adata.obs:
+    print(f"  Warning: Label key '{label_key}' not in adata.obs")
+    sys.exit(0)
+
+# Extract categories
+if hasattr(adata.obs[label_key], 'cat'):
+    categories = adata.obs[label_key].cat.categories.tolist()
+else:
+    categories = adata.obs[label_key].unique().tolist()
+
+# Clean categories
+cleaned_categories = []
+for cat in categories:
+    cat_str = str(cat)
+    if cat_str not in ['nan', 'None', 'NA', '<NA>']:
+        cleaned_categories.append(cat_str)
+
+# Get value counts
+value_counts = adata.obs[label_key].value_counts()
+category_counts = {}
+for cat, count in value_counts.items():
+    cat_str = str(cat)
+    if cat_str not in ['nan', 'None', 'NA', '<NA>']:
+        category_counts[cat_str] = int(count)
+
+# Create metadata
+metadata = {
+    "label_key": label_key,
+    "categories": cleaned_categories,
+    "num_categories": len(cleaned_categories),
+    "category_counts": category_counts,
+    "n_cells": len(adata),
+    "n_genes": adata.n_vars,
+    "adata_file": os.path.basename(adata_path),
+}
+
+# Save metadata
+metadata_file = os.path.join('${OUTPUT_DIR}', 'plot_metadata.json')
+with open(metadata_file, 'w') as f:
+    json.dump(metadata, f, indent=2, default=str)
+
+print(f"  Saved plot metadata to: {metadata_file}")
+print(f"  Label key: {label_key}")
+print(f"  Categories: {len(cleaned_categories)}")
+print(f"  First 5 categories: {cleaned_categories[:5]}")
+EOF
+
+echo ""
+echo "========================================="
+echo "Experiment completed: ${EXPERIMENT_NAME}"
+echo "Date: $(date)"
+echo "========================================="

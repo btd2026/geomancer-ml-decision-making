@@ -169,6 +169,7 @@
         let wandbData = {};
         let runColors = {}; // Extracted colors for each run
         let galleryData = {}; // Dynamic dataset info from metadata_analyzer.py
+        let labelCategories = {}; // Actual categories from SLURM jobs (label_categories.json)
         let labels = {}; // Structure: {runId: [array of structure types]}
         let annotations = {density: {}, quality: {}}; // Secondary annotations
         let notes = {}; // Run notes
@@ -210,6 +211,17 @@
                     }
                 } catch (colorError) {
                     console.warn('Could not load run_colors.json, using default colors:', colorError);
+                }
+
+                // Load actual label categories from SLURM jobs
+                try {
+                    const categoriesResponse = await fetch('label_categories.json');
+                    if (categoriesResponse.ok) {
+                        labelCategories = await categoriesResponse.json();
+                        console.log(`Loaded actual label categories for ${Object.keys(labelCategories).length} runs`);
+                    }
+                } catch (categoriesError) {
+                    console.warn('Could not load label_categories.json:', categoriesError);
                 }
 
                 // Load wandb metadata
@@ -380,9 +392,9 @@
             return defaults[index % defaults.length];
         }
 
-        function createPlotLegend(runData) {
-            const labelKey = runData.label_key || '';
-            const datasetName = runData.dataset_name || '';
+        function createPlotLegend(runData, runInfo) {
+            const labelKey = runInfo?.label_key || runData.label_key || '';
+            const datasetName = runInfo?.dataset_name || runData.dataset_name || '';
             const config = runData.config || {};
             const runId = runData.run_id || runData.wandb_run_id;
 
@@ -514,8 +526,39 @@
 
             // Prioritize config label_key (actual visualization variable) over top-level label_key (dataset name)
             const actualLabelKey = config?.data?.value?.label_key || labelKey;
+
+            // Get dataset info for fallback (initialize here so it's available throughout)
             const datasetInfo = knownDatasets[actualLabelKey];
 
+            // FIRST: Check if we have actual categories from label_categories.json (from SLURM jobs)
+            const actualCategories = labelCategories[runId];
+            if (actualCategories && actualCategories.categories && actualCategories.categories.length > 0) {
+                legendInfo.push(`<strong>Label Key:</strong> ${actualCategories.label_key || actualLabelKey}`);
+                legendInfo.push(`<strong>Categories:</strong> ${actualCategories.num_categories} classes`);
+
+                // Use actual extracted colors if available, otherwise use defaults
+                let colorsToUse = defaultColors;
+                if (hasActualColors && actualRunColors.colors) {
+                    colorsToUse = actualRunColors.colors;
+                }
+
+                // Show up to 8 actual categories with their colors
+                const maxExamples = 8;
+                const displayCategories = actualCategories.categories.slice(0, Math.min(maxExamples, colorsToUse.length));
+
+                colorExamples = displayCategories.map((category, i) =>
+                    `<div style="display: flex; align-items: center; gap: 8px; margin: 2px 0;">
+                        <div style="width: 12px; height: 12px; background: ${colorsToUse[i % colorsToUse.length]}; border-radius: 2px; border: 1px solid #ddd;"></div>
+                        <span style="font-size: 10px; color: #2c3e50;">${category}</span>
+                    </div>`
+                ).join('');
+
+                // Add note if there are more categories
+                if (actualCategories.categories.length > maxExamples) {
+                    colorExamples += `<div style="font-size: 9px; color: #7f8c8d; font-style: italic; padding-left: 22px; margin-top: 4px;">... and ${actualCategories.categories.length - maxExamples} more categories</div>`;
+                }
+            } else {
+                // FALLBACK: Use known dataset mappings
             if (datasetInfo) {
                 legendInfo.push(`<strong>Data Type:</strong> ${datasetInfo.type}`);
                 legendInfo.push(`<strong>Description:</strong> ${datasetInfo.description}`);
@@ -579,6 +622,7 @@
                     }
                 }
             }
+            }  // End of else block for when we don't have actualCategories
 
             // Add configuration details
             if (config?.data?.value?.label_key) {
