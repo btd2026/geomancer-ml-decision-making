@@ -8,8 +8,8 @@ from pathlib import Path
 import time
 
 # Paths
-datasets_file = Path('/home/btd8/llm-paper-analyze/datasets_to_download.csv')
-output_dir = Path('/nfs/roberts/project/pi_sk2433/shared/llm-analyze-geo-datasets/processed')
+datasets_file = Path('data/datasets_to_download.csv')
+output_dir = Path('/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/processed')
 
 # Ensure output directory exists
 output_dir.mkdir(parents=True, exist_ok=True)
