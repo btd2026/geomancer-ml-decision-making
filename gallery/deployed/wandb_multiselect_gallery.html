@@ -138,6 +138,7 @@
     <div class="controls">
         <input type="text" class="search-box" id="searchBox" placeholder="Search datasets..." onkeyup="filterBySearch()">
         <button class="btn-export" onclick="exportLabels()">Export Multi-Select JSON</button>
+        <button class="btn-filter" id="toggleViewBtn" onclick="toggleView()">Grouped View</button>
         <button class="btn-filter" onclick="filterCards('all')">Show All</button>
         <button class="btn-filter" onclick="filterCards('unlabeled')">Unlabeled Only</button>
         <button class="btn-filter" onclick="filterCards('labeled')">Labeled Only</button>
@@ -233,41 +234,59 @@
             return names;
         }
 
-        // Create dynamic color legend using actual extracted colors
+        // Create dynamic color legend using colors dict (label_name -> hex_color)
         function createPlotLegend(runData, runInfo) {
-                const name = categoryNames[i % categoryNames.length];
-                colorExamples += `
+            const labelKey = runData.label_key || runInfo.label_key || 'unknown';
+            const numCategories = runData.n_categories || runInfo.num_categories || runInfo.n_categories || 0;
+
+            // Get colors - support both dict format {label: color} and array format [color, ...]
+            let colors = runData.colors || runInfo.colors || {};
+            if (Array.isArray(colors)) {
+                // Convert array to dict
+                const categories = runData.categories || runInfo.categories || [];
+                const colorDict = {};
+                colors.forEach((color, i) => {
+                    const name = categories[i] || `Category ${i + 1}`;
+                    colorDict[name] = color;
+                });
+                colors = colorDict;
+            }
+
+            const categoryNames = Object.keys(colors);
+            const maxExamples = 15; // Show max 15 categories in legend
+            let colorItems = '';
+
+            categoryNames.slice(0, maxExamples).forEach((name) => {
+                const color = colors[name];
+                colorItems += `
                     <div style="display: flex; align-items: center; gap: 8px; margin: 2px 0;">
-                        <div style="width: 14px; height: 14px; background: ${color}; border-radius: 3px; border: 1px solid #ccc; flex-shrink: 0;"></div>
-                        <span style="font-size: 11px; color: #2c3e50;">${name}</span>
+                        <div style="width: 14px; height: 14px; background: ${color};
+                             border-radius: 3px; border: 1px solid #ccc; flex-shrink: 0;"></div>
+                        <span style="font-size: 11px; color: #2c3e50; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">${name}</span>
+                    </div>`;
+            });
+
+            if (categoryNames.length > maxExamples) {
+                colorItems += `
+                    <div style="font-size: 10px; color: #7f8c8d; font-style: italic; padding-left: 22px; margin-top: 4px;">
+                        ... and ${categoryNames.length - maxExamples} more categories
                     </div>`;
             }
 
-            if (numCategories > maxExamples) {
-                colorExamples += `
-                    <div style="font-size: 10px; color: #7f8c8d; font-style: italic; padding-left: 22px;">
-                        ... and ${numCategories - maxExamples} more categories
-                    </div>`;
-            }
+            const displayLabelKey = labelKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
             return `
                 <div class="color-legend-section">
                     <div class="color-legend-header" onclick="toggleColorLegend(this)">
                         <div class="color-legend-title">
-                            ${actualLabelKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            <span class="color-legend-label">${numCategories} categories</span>
+                            ${displayLabelKey}
+                            <span class="color-legend-label">${numCategories || categoryNames.length} categories</span>
                         </div>
                         <div class="color-legend-toggle">▶</div>
                     </div>
                     <div class="color-legend-body">
-                        ${legendInfo.map(info => `<div style="margin: 4px 0; color: #2c3e50; font-size: 11px;">${info}</div>`).join('')}
-                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0e6d2;">
-                            <div style="font-size: 10px; color: #8e6f3a; margin-bottom: 8px; font-weight: 600;">Color Legend (${numCategories} total):</div>
-                            ${colorExamples}
-                        </div>
-                        <div style="margin-top: 8px; font-size: 9px; color: #95a5a6; font-style: italic;">
-                            ${hasActualColors ? '* Colors extracted from actual PHATE plot images' : '* Colors may vary in actual plot'}
-                        </div>
+                        <div style="font-size: 10px; color: #8e6f3a; margin-bottom: 8px; font-weight: 600;">Color Legend:</div>
+                        ${colorItems || '<div style="color: #7f8c8d; font-style: italic;">No color data available</div>'}
                     </div>
                 </div>
             `;
@@ -512,26 +531,42 @@
             document.getElementById('imageModal').style.display = 'none';
         }
 
+        // New unified data format
+        let galleryData = null;  // {datasets: {}, runs: {}, summary: {}}
+        let useGroupedView = true;  // Show datasets grouped view by default
+
         async function loadData() {
             try {
-                // Load run colors
-                const colorsResponse = await fetch('run_colors.json');
-                if (colorsResponse.ok) {
-                    runColors = await colorsResponse.json();
-                    console.log(`Loaded colors for ${Object.keys(runColors).length} runs`);
-                }
+                // Try loading new unified gallery data first
+                const newResponse = await fetch('gallery_data.json');
+                if (newResponse.ok) {
+                    galleryData = await newResponse.json();
+                    console.log(`Loaded new gallery data: ${galleryData.summary?.total_runs || 0} runs, ${galleryData.summary?.total_datasets || 0} datasets`);
+                    // Convert runs to wandbData format for backward compatibility
+                    wandbData = galleryData.runs || {};
+                } else {
+                    // Fall back to legacy data files
+                    console.log('New gallery data not found, loading legacy files...');
 
-                // Load label categories (actual category names from h5ad)
-                const labelCategoriesResponse = await fetch('label_categories.json');
-                if (labelCategoriesResponse.ok) {
-                    window.labelCategories = await labelCategoriesResponse.json();
-                    console.log(`Loaded actual label categories for ${Object.keys(window.labelCategories).length} runs`);
-                }
+                    // Load run colors
+                    const colorsResponse = await fetch('run_colors.json');
+                    if (colorsResponse.ok) {
+                        runColors = await colorsResponse.json();
+                        console.log(`Loaded colors for ${Object.keys(runColors).length} runs`);
+                    }
 
-                // Load wandb metadata
-                const response = await fetch('wandb_metadata.json');
-                if (response.ok) {
-                    wandbData = await response.json();
+                    // Load label categories (actual category names from h5ad)
+                    const labelCategoriesResponse = await fetch('label_categories.json');
+                    if (labelCategoriesResponse.ok) {
+                        window.labelCategories = await labelCategoriesResponse.json();
+                        console.log(`Loaded actual label categories for ${Object.keys(window.labelCategories).length} runs`);
+                    }
+
+                    // Load wandb metadata
+                    const response = await fetch('wandb_metadata.json');
+                    if (response.ok) {
+                        wandbData = await response.json();
+                    }
                 }
 
                 loadFromStorage();
@@ -547,17 +582,34 @@
         }
 
         function createCard(runId) {
-            const runData = wandbData[runId] || {};
+            // Support both new unified format and legacy format
+            let runData = wandbData[runId] || {};
             const runLabels = labels[runId] || [];
             const isLabeled = runLabels.length > 0;
             const isFlagged = flagged.has(runId);
-            const runInfo = runColors[runId] || {};
 
-            // Get actual label key from config
-            const actualLabelKey = runData.config?.data?.value?.label_key || runData.label_key || 'N/A';
+            // Get run info from either new format or legacy runColors
+            let runInfo = {};
+            if (galleryData && galleryData.runs && galleryData.runs[runId]) {
+                // New unified format - runData is already correct
+                runInfo = runData;
+            } else {
+                // Legacy format - merge from runColors and labelCategories
+                runInfo = runColors[runId] || {};
+                if (window.labelCategories && window.labelCategories[runId]) {
+                    runInfo.categories = window.labelCategories[runId].categories;
+                }
+            }
 
-            const imagePath = `images/${runId}.png`;
-            const numCategories = runInfo.num_categories || runInfo.colors?.length || '?';
+            // Get actual label key
+            const actualLabelKey = runData.label_key || runData.config?.data?.value?.label_key || runInfo.label_key || 'N/A';
+
+            // Image path - support both new and old formats
+            const imagePath = runData.image_path || `images/${runId}.png`;
+            const numCategories = runData.n_categories || runInfo.num_categories || runInfo.n_categories || Object.keys(runData.colors || runInfo.colors || {}).length || '?';
+
+            // Get algorithm type (for future use)
+            const algorithmType = runData.algorithm_type || 'phate';
 
             // Create badge
             let badgeHTML = '';
@@ -573,10 +625,11 @@
             if (isLabeled) card.classList.add('labeled');
             if (isFlagged) card.classList.add('flagged');
             card.dataset.runId = runId;
+            card.dataset.algorithmType = algorithmType;
 
             card.innerHTML = `
                 ${badgeHTML || '<div class="label-badge" style="display:none;"></div>'}
-                <img src="${imagePath}" alt="PHATE visualization" onclick="openModal('${imagePath}')"
+                <img src="${imagePath}" alt="${algorithmType.toUpperCase()} visualization" onclick="openModal('${imagePath}')"
                      onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzk1YTVhNiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4='">
                 <div class="card-body">
                     <div class="card-header">
@@ -586,6 +639,7 @@
                         </button>
                     </div>
                     <div style="font-size: 11px; color: #95a5a6; margin-bottom: 10px;">
+                        <span style="background: ${algorithmType === 'phate' ? '#3498db' : algorithmType === 'reeb' ? '#9b59b6' : '#27ae60'}; color: white; padding: 1px 6px; border-radius: 3px; font-size: 10px; margin-right: 5px;">${algorithmType.toUpperCase()}</span>
                         Run: ${runId} | Label: ${actualLabelKey} | ${numCategories} classes
                     </div>
 
@@ -636,13 +690,87 @@
             const gallery = document.getElementById('gallery');
             gallery.innerHTML = '';
 
+            // Use grouped view if we have dataset structure from new format
+            if (useGroupedView && galleryData && galleryData.datasets) {
+                renderGroupedGallery(gallery);
+            } else {
+                renderFlatGallery(gallery);
+            }
+
+            document.getElementById('totalCount').textContent = Object.keys(wandbData).length;
+        }
+
+        function renderFlatGallery(gallery) {
             const runIds = Object.keys(wandbData).sort();
             runIds.forEach(runId => {
                 const card = createCard(runId);
                 gallery.appendChild(card);
             });
+        }
 
-            document.getElementById('totalCount').textContent = runIds.length;
+        function renderGroupedGallery(gallery) {
+            // Group runs by dataset
+            const datasets = {};
+
+            Object.entries(wandbData).forEach(([runId, runData]) => {
+                const dsName = runData.dataset_name || 'Unknown Dataset';
+                if (!datasets[dsName]) {
+                    datasets[dsName] = {
+                        metadata: galleryData.datasets?.[dsName] || {},
+                        runs: []
+                    };
+                }
+                datasets[dsName].runs.push({runId, ...runData});
+            });
+
+            // Sort datasets alphabetically and render
+            Object.entries(datasets).sort(([a], [b]) => a.localeCompare(b)).forEach(([dsName, dsData]) => {
+                // Create dataset header
+                const header = document.createElement('div');
+                header.className = 'dataset-header';
+                header.style.cssText = 'grid-column: 1/-1; background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); color: white; padding: 15px 20px; border-radius: 8px; margin-top: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;';
+
+                const nObs = dsData.metadata.n_obs;
+                const nVars = dsData.metadata.n_vars;
+                const statsParts = [];
+                if (nObs) statsParts.push(`${nObs.toLocaleString()} cells`);
+                if (nVars) statsParts.push(`${nVars.toLocaleString()} genes`);
+                statsParts.push(`${dsData.runs.length} run${dsData.runs.length !== 1 ? 's' : ''}`);
+
+                header.innerHTML = `
+                    <div>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600;">${dsName}</h3>
+                    </div>
+                    <span style="font-size: 12px; opacity: 0.8;">${statsParts.join(' | ')}</span>
+                `;
+                gallery.appendChild(header);
+
+                // Create runs container
+                const runContainer = document.createElement('div');
+                runContainer.className = 'runs-container';
+                runContainer.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 20px; margin-top: 15px;';
+
+                // Sort runs by algorithm type and label key
+                dsData.runs.sort((a, b) => {
+                    const algoOrder = {phate: 0, reeb: 1, dse: 2};
+                    const algoA = algoOrder[a.algorithm_type] ?? 99;
+                    const algoB = algoOrder[b.algorithm_type] ?? 99;
+                    if (algoA !== algoB) return algoA - algoB;
+                    return (a.label_key || '').localeCompare(b.label_key || '');
+                }).forEach(run => {
+                    runContainer.appendChild(createCard(run.runId));
+                });
+
+                gallery.appendChild(runContainer);
+            });
+        }
+
+        function toggleView() {
+            useGroupedView = !useGroupedView;
+            const btn = document.getElementById('toggleViewBtn');
+            btn.textContent = useGroupedView ? 'Flat View' : 'Grouped View';
+            renderGallery();
+            updateStats();
         }
 
         // Initialize

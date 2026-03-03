@@ -33,6 +33,14 @@ data/extracted/
 logs/*.out
 logs/*.err
 data/papers/logs/
+slurm-*.out
+
+# WandB experiment artifacts
+wandb/
+
+# Archived directories
+_archived*/
+_archive*/
 
 # Cache
 data/cache/

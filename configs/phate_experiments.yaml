@@ -1,0 +1,656 @@
+# PHATE Experiments Configuration
+# Auto-generated with all 101 datasets from processed directory
+
+h5ad_base_dir: /nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/processed
+output_dir: /nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/phate_results
+wandb:
+  entity: cesar-valdez-mcgill-university
+  project: manylatent-2026-brian
+defaults:
+  phate:
+    n_components: 2
+    knn: 30
+    t: 10
+    decay: 60
+    seed: 42
+  label_key: auto
+  slurm_preset: medium
+  output:
+    generate_plot: true
+    save_embedding: true
+    compute_metrics: true
+    extract_metadata: true
+datasets:
+- name: A__Balanced__Bone_Marrow_Reference_Map_of_Hematopo_cd2f23c1
+  h5ad_file: A__Balanced__Bone_Marrow_Reference_Map_of_Hematopo_cd2f23c1.h5ad
+  description: Dataset A__Balanced__Bone_Marrow_Reference_Map_of_Hematopo_cd2f23c1
+  runs:
+  - name: default
+    label_key: auto
+- name: Airway_edc8d3fe
+  h5ad_file: Airway_edc8d3fe.h5ad
+  description: Dataset Airway_edc8d3fe
+  runs:
+  - name: default
+    label_key: auto
+- name: All_-_A_single-cell_transcriptomic_atlas_character_48b37086
+  h5ad_file: All_-_A_single-cell_transcriptomic_atlas_character_48b37086.h5ad
+  description: Dataset All_-_A_single-cell_transcriptomic_atlas_character_48b37086
+  runs:
+  - name: default
+    label_key: auto
+- name: All_-_A_single-cell_transcriptomic_atlas_character_f16a8f4d
+  h5ad_file: All_-_A_single-cell_transcriptomic_atlas_character_f16a8f4d.h5ad
+  description: Dataset All_-_A_single-cell_transcriptomic_atlas_character_f16a8f4d
+  runs:
+  - name: default
+    label_key: auto
+- name: All_cells_and_nuclei_093d3bfe
+  h5ad_file: All_cells_and_nuclei_093d3bfe.h5ad
+  description: Dataset All_cells_and_nuclei_093d3bfe
+  runs:
+  - name: default
+    label_key: auto
+- name: all_cells_cff99df2
+  h5ad_file: all_cells_cff99df2.h5ad
+  description: Dataset all_cells_cff99df2
+  runs:
+  - name: default
+    label_key: auto
+- name: All___Cells_of_the_adult_human_heart_d4e69e01
+  h5ad_file: All___Cells_of_the_adult_human_heart_d4e69e01.h5ad
+  description: Dataset All___Cells_of_the_adult_human_heart_d4e69e01
+  runs:
+  - name: default
+    label_key: auto
+- name: All_Cells_-_snRNA-seq_ac0c6561
+  h5ad_file: All_Cells_-_snRNA-seq_ac0c6561.h5ad
+  description: Dataset All_Cells_-_snRNA-seq_ac0c6561
+  runs:
+  - name: default
+    label_key: auto
+- name: All_donors_all_cell_states__in_vivo__74cff64f
+  h5ad_file: All_donors_all_cell_states__in_vivo__74cff64f.h5ad
+  description: Dataset All_donors_all_cell_states__in_vivo__74cff64f
+  runs:
+  - name: default
+    label_key: auto
+- name: All_major_cell_types_in_adult_human_retina_0129dbd9
+  h5ad_file: All_major_cell_types_in_adult_human_retina_0129dbd9.h5ad
+  description: Dataset All_major_cell_types_in_adult_human_retina_0129dbd9
+  runs:
+  - name: default
+    label_key: auto
+- name: All-snRNA-Spatial_multi-omic_map_of_human_myocardi_1c739a3e
+  h5ad_file: All-snRNA-Spatial_multi-omic_map_of_human_myocardi_1c739a3e.h5ad
+  description: Dataset All-snRNA-Spatial_multi-omic_map_of_human_myocardi_1c739a3e
+  runs:
+  - name: default
+    label_key: auto
+- name: An_integrated_transcriptomic_and_epigenomic_atlas_35081d47
+  h5ad_file: An_integrated_transcriptomic_and_epigenomic_atlas_35081d47.h5ad
+  description: Dataset An_integrated_transcriptomic_and_epigenomic_atlas_35081d47
+  runs:
+  - name: default
+    label_key: auto
+- name: A_Single-Cell_Atlas_of_Mouse_White_Adipose_Tissue_a2da8d7b
+  h5ad_file: A_Single-Cell_Atlas_of_Mouse_White_Adipose_Tissue_a2da8d7b.h5ad
+  description: Dataset A_Single-Cell_Atlas_of_Mouse_White_Adipose_Tissue_a2da8d7b
+  runs:
+  - name: default
+    label_key: auto
+- name: Atlas_of_the_developing_mouse_thalamus_79a2344d
+  h5ad_file: Atlas_of_the_developing_mouse_thalamus_79a2344d.h5ad
+  description: Dataset Atlas_of_the_developing_mouse_thalamus_79a2344d
+  runs:
+  - name: default
+    label_key: auto
+- name: Blood_d86edd6a
+  h5ad_file: Blood_d86edd6a.h5ad
+  description: Dataset Blood_d86edd6a
+  runs:
+  - name: default
+    label_key: auto
+- name: Carebank_8f4f8502
+  h5ad_file: Carebank_8f4f8502.h5ad
+  description: Dataset Carebank_8f4f8502
+  runs:
+  - name: default
+    label_key: auto
+- name: Circulating_Immune_cells_--_CV19_infection__vaccin_242c6e7f
+  h5ad_file: Circulating_Immune_cells_--_CV19_infection__vaccin_242c6e7f.h5ad
+  description: Dataset Circulating_Immune_cells_--_CV19_infection__vaccin_242c6e7f
+  runs:
+  - name: default
+    label_key: auto
+- name: ClassNeuroblast_e59a4394
+  h5ad_file: ClassNeuroblast_e59a4394.h5ad
+  description: Dataset ClassNeuroblast_e59a4394
+  runs:
+  - name: default
+    label_key: auto
+- name: Combined_single_cell_and_single_nuclei_RNA-Seq_dat_d567b692
+  h5ad_file: Combined_single_cell_and_single_nuclei_RNA-Seq_dat_d567b692.h5ad
+  description: Dataset Combined_single_cell_and_single_nuclei_RNA-Seq_dat_d567b692
+  runs:
+  - name: default
+    label_key: auto
+- name: Core_GBmap_c888b684
+  h5ad_file: Core_GBmap_c888b684.h5ad
+  description: Dataset Core_GBmap_c888b684
+  runs:
+  - name: default
+    label_key: auto
+- name: COVID-19_Immune_Altas__Integration_of_5_public_COV_96a3f64b
+  h5ad_file: COVID-19_Immune_Altas__Integration_of_5_public_COV_96a3f64b.h5ad
+  description: Dataset COVID-19_Immune_Altas__Integration_of_5_public_COV_96a3f64b
+  runs:
+  - name: default
+    label_key: auto
+- name: DCM_ACM_heart_cell_atlas__Cardiomyocytes_f7995301
+  h5ad_file: DCM_ACM_heart_cell_atlas__Cardiomyocytes_f7995301.h5ad
+  description: Dataset DCM_ACM_heart_cell_atlas__Cardiomyocytes_f7995301
+  runs:
+  - name: default
+    label_key: auto
+- name: Dissection__Primary_visual_cortex_V1__8d1dd010
+  h5ad_file: Dissection__Primary_visual_cortex_V1__8d1dd010.h5ad
+  description: Dataset Dissection__Primary_visual_cortex_V1__8d1dd010
+  runs:
+  - name: default
+    label_key: auto
+- name: Excitatory_215ede73
+  h5ad_file: Excitatory_215ede73.h5ad
+  description: Dataset Excitatory_215ede73
+  runs:
+  - name: default
+    label_key: auto
+- name: Figure_1_-_A_cell_atlas_of_human_thymic_developmen_cda2c8cd
+  h5ad_file: Figure_1_-_A_cell_atlas_of_human_thymic_developmen_cda2c8cd.h5ad
+  description: Dataset Figure_1_-_A_cell_atlas_of_human_thymic_developmen_cda2c8cd
+  runs:
+  - name: default
+    label_key: auto
+- name: Frozen_samples__single_nucleus__34f5307e
+  h5ad_file: Frozen_samples__single_nucleus__34f5307e.h5ad
+  description: Dataset Frozen_samples__single_nucleus__34f5307e
+  runs:
+  - name: default
+    label_key: auto
+- name: Global_1b9d8702
+  h5ad_file: Global_1b9d8702.h5ad
+  description: Dataset Global_1b9d8702
+  runs:
+  - name: default
+    label_key: auto
+- name: GSE157827
+  h5ad_file: GSE157827.h5ad
+  description: Dataset GSE157827
+  runs:
+  - name: default
+    label_key: auto
+- name: GSE159677
+  h5ad_file: GSE159677.h5ad
+  description: Dataset GSE159677
+  runs:
+  - name: default
+    label_key: auto
+- name: GSE164983
+  h5ad_file: GSE164983.h5ad
+  description: Dataset GSE164983
+  runs:
+  - name: default
+    label_key: auto
+- name: GSE167490
+  h5ad_file: GSE167490.h5ad
+  description: Dataset GSE167490
+  runs:
+  - name: default
+    label_key: auto
+- name: GSE174367
+  h5ad_file: GSE174367.h5ad
+  description: Dataset GSE174367
+  runs:
+  - name: default
+    label_key: auto
+- name: GSE191288
+  h5ad_file: GSE191288.h5ad
+  description: Dataset GSE191288
+  runs:
+  - name: default
+    label_key: auto
+- name: GSE220243
+  h5ad_file: GSE220243.h5ad
+  description: Dataset GSE220243
+  runs:
+  - name: default
+    label_key: auto
+- name: GSE271107
+  h5ad_file: GSE271107.h5ad
+  description: Dataset GSE271107
+  runs:
+  - name: default
+    label_key: auto
+- name: HBCA_-_epithelial_975e13b6
+  h5ad_file: HBCA_-_epithelial_975e13b6.h5ad
+  description: Dataset HBCA_-_epithelial_975e13b6
+  runs:
+  - name: default
+    label_key: auto
+- name: HBCA_-_stroma_be35c935
+  h5ad_file: HBCA_-_stroma_be35c935.h5ad
+  description: Dataset HBCA_-_stroma_be35c935
+  runs:
+  - name: default
+    label_key: auto
+- name: Human_CellCards_Multi-Study_CellRef_1_0_Atlas_eb499fd8
+  h5ad_file: Human_CellCards_Multi-Study_CellRef_1_0_Atlas_eb499fd8.h5ad
+  description: Dataset Human_CellCards_Multi-Study_CellRef_1_0_Atlas_eb499fd8
+  runs:
+  - name: default
+    label_key: auto
+- name: human_cHSPCs_-_Illumina_d9f3a82c
+  h5ad_file: human_cHSPCs_-_Illumina_d9f3a82c.h5ad
+  description: Dataset human_cHSPCs_-_Illumina_d9f3a82c
+  runs:
+  - name: default
+    label_key: auto
+- name: Human_Female_18e2a8c5
+  h5ad_file: Human_Female_18e2a8c5.h5ad
+  description: Dataset Human_Female_18e2a8c5
+  runs:
+  - name: default
+    label_key: auto
+- name: Human_healthy_adult_skin_scRNA-seq_data_f0f0d7c4
+  h5ad_file: Human_healthy_adult_skin_scRNA-seq_data_f0f0d7c4.h5ad
+  description: Dataset Human_healthy_adult_skin_scRNA-seq_data_f0f0d7c4
+  runs:
+  - name: default
+    label_key: auto
+- name: human_intestine_organoid_cell_atlas_776a1e4a
+  h5ad_file: human_intestine_organoid_cell_atlas_776a1e4a.h5ad
+  description: Dataset human_intestine_organoid_cell_atlas_776a1e4a
+  runs:
+  - name: default
+    label_key: auto
+- name: human_lung_organoid_cell_atlas_569bce19
+  h5ad_file: human_lung_organoid_cell_atlas_569bce19.h5ad
+  description: Dataset human_lung_organoid_cell_atlas_569bce19
+  runs:
+  - name: default
+    label_key: auto
+- name: Human_Somatic_Cell_Lineage_4fb330ab
+  h5ad_file: Human_Somatic_Cell_Lineage_4fb330ab.h5ad
+  description: Dataset Human_Somatic_Cell_Lineage_4fb330ab
+  runs:
+  - name: default
+    label_key: auto
+- name: HypoMap___a_unified_single_cell_gene_expression_at_dbb4e1ed
+  h5ad_file: HypoMap___a_unified_single_cell_gene_expression_at_dbb4e1ed.h5ad
+  description: Dataset HypoMap___a_unified_single_cell_gene_expression_at_dbb4e1ed
+  runs:
+  - name: default
+    label_key: auto
+- name: Integrated_cancer_cell-specific_single-cell_RNA-se_7b20c613
+  h5ad_file: Integrated_cancer_cell-specific_single-cell_RNA-se_7b20c613.h5ad
+  description: Dataset Integrated_cancer_cell-specific_single-cell_RNA-se_7b20c613
+  runs:
+  - name: default
+    label_key: auto
+- name: Integrated_Single-nucleus_and_Single-cell_RNA-seq_0b75c598
+  h5ad_file: Integrated_Single-nucleus_and_Single-cell_RNA-seq_0b75c598.h5ad
+  description: Dataset Integrated_Single-nucleus_and_Single-cell_RNA-seq_0b75c598
+  runs:
+  - name: default
+    label_key: auto
+- name: Intestine_cbec7853
+  h5ad_file: Intestine_cbec7853.h5ad
+  description: Dataset Intestine_cbec7853
+  runs:
+  - name: default
+    label_key: auto
+- name: Kidney_f95d8919
+  h5ad_file: Kidney_f95d8919.h5ad
+  description: Dataset Kidney_f95d8919
+  runs:
+  - name: default
+    label_key: auto
+- name: L2_3_IT_-_DLPFC__Seattle_Alzheimer_s_Disease_Atlas_646e3e87
+  h5ad_file: L2_3_IT_-_DLPFC__Seattle_Alzheimer_s_Disease_Atlas_646e3e87.h5ad
+  description: Dataset L2_3_IT_-_DLPFC__Seattle_Alzheimer_s_Disease_Atlas_646e3e87
+  runs:
+  - name: default
+    label_key: auto
+- name: L2_3_IT_-_MTG__Seattle_Alzheimer_s_Disease_Atlas___b74100ea
+  h5ad_file: L2_3_IT_-_MTG__Seattle_Alzheimer_s_Disease_Atlas___b74100ea.h5ad
+  description: Dataset L2_3_IT_-_MTG__Seattle_Alzheimer_s_Disease_Atlas___b74100ea
+  runs:
+  - name: default
+    label_key: auto
+- name: Liver_1d89d081
+  h5ad_file: Liver_1d89d081.h5ad
+  description: Dataset Liver_1d89d081
+  runs:
+  - name: default
+    label_key: auto
+- name: Lung_493a8b60
+  h5ad_file: Lung_493a8b60.h5ad
+  description: Dataset Lung_493a8b60
+  runs:
+  - name: default
+    label_key: auto
+- name: Lymphoid_cells_3affa268
+  h5ad_file: Lymphoid_cells_3affa268.h5ad
+  description: Dataset Lymphoid_cells_3affa268
+  runs:
+  - name: default
+    label_key: auto
+- name: Major_cell_cluster__Endothelium_361eef7c
+  h5ad_file: Major_cell_cluster__Endothelium_361eef7c.h5ad
+  description: Dataset Major_cell_cluster__Endothelium_361eef7c
+  runs:
+  - name: default
+    label_key: auto
+- name: Major_cell_cluster__Hepatocytes_977e6167
+  h5ad_file: Major_cell_cluster__Hepatocytes_977e6167.h5ad
+  description: Dataset Major_cell_cluster__Hepatocytes_977e6167
+  runs:
+  - name: default
+    label_key: auto
+- name: Major_cell_cluster__Muscle_cells_eaa7a0b0
+  h5ad_file: Major_cell_cluster__Muscle_cells_eaa7a0b0.h5ad
+  description: Dataset Major_cell_cluster__Muscle_cells_eaa7a0b0
+  runs:
+  - name: default
+    label_key: auto
+- name: Major_cell_cluster__White_blood_cells_c34e5efb
+  h5ad_file: Major_cell_cluster__White_blood_cells_c34e5efb.h5ad
+  description: Dataset Major_cell_cluster__White_blood_cells_c34e5efb
+  runs:
+  - name: default
+    label_key: auto
+- name: Midbrain_bfbd9097
+  h5ad_file: Midbrain_bfbd9097.h5ad
+  description: Dataset Midbrain_bfbd9097
+  runs:
+  - name: default
+    label_key: auto
+- name: Mouse_--_all_cells_7b6bab5a
+  h5ad_file: Mouse_--_all_cells_7b6bab5a.h5ad
+  description: Dataset Mouse_--_all_cells_7b6bab5a
+  runs:
+  - name: default
+    label_key: auto
+- name: mouse_limb_scRNAseq_4c4cfb38
+  h5ad_file: mouse_limb_scRNAseq_4c4cfb38.h5ad
+  description: Dataset mouse_limb_scRNAseq_4c4cfb38
+  runs:
+  - name: default
+    label_key: auto
+- name: Mouse_pancreatic_islet_scRNA-seq_atlas_across_sexe_49e4ffcc
+  h5ad_file: Mouse_pancreatic_islet_scRNA-seq_atlas_across_sexe_49e4ffcc.h5ad
+  description: Dataset Mouse_pancreatic_islet_scRNA-seq_atlas_across_sexe_49e4ffcc
+  runs:
+  - name: default
+    label_key: auto
+- name: MRCA__scRNA-seq_of_the_mouse_retina_-_all_cells_23f77ae6
+  h5ad_file: MRCA__scRNA-seq_of_the_mouse_retina_-_all_cells_23f77ae6.h5ad
+  description: Dataset MRCA__scRNA-seq_of_the_mouse_retina_-_all_cells_23f77ae6
+  runs:
+  - name: default
+    label_key: auto
+- name: MSK_SPECTRUM_-_CD4__T_cells__CD8__T_cells__ILCs_an_e3a7e927
+  h5ad_file: MSK_SPECTRUM_-_CD4__T_cells__CD8__T_cells__ILCs_an_e3a7e927.h5ad
+  description: Dataset MSK_SPECTRUM_-_CD4__T_cells__CD8__T_cells__ILCs_an_e3a7e927
+  runs:
+  - name: default
+    label_key: auto
+- name: MSK_SPECTRUM_-_Malignant_and_non-malignant_epithel_44c93f2b
+  h5ad_file: MSK_SPECTRUM_-_Malignant_and_non-malignant_epithel_44c93f2b.h5ad
+  description: Dataset MSK_SPECTRUM_-_Malignant_and_non-malignant_epithel_44c93f2b
+  runs:
+  - name: default
+    label_key: auto
+- name: Myeloid_cells_2aa1c93c
+  h5ad_file: Myeloid_cells_2aa1c93c.h5ad
+  description: Dataset Myeloid_cells_2aa1c93c
+  runs:
+  - name: default
+    label_key: auto
+- name: Oral_and_Craniofacial_Atlas_cb252df6
+  h5ad_file: Oral_and_Craniofacial_Atlas_cb252df6.h5ad
+  description: Dataset Oral_and_Craniofacial_Atlas_cb252df6
+  runs:
+  - name: default
+    label_key: auto
+- name: PBMC_2a498ace
+  h5ad_file: PBMC_2a498ace.h5ad
+  description: Dataset PBMC_2a498ace
+  runs:
+  - name: default
+    label_key: auto
+- name: Periheart_f1606894
+  h5ad_file: Periheart_f1606894.h5ad
+  description: Dataset Periheart_f1606894
+  runs:
+  - name: default
+    label_key: auto
+- name: plaque_atlas_72955cdb
+  h5ad_file: plaque_atlas_72955cdb.h5ad
+  description: Dataset plaque_atlas_72955cdb
+  runs:
+  - name: default
+    label_key: auto
+- name: scRNA-seq_data_-_epithelial_cells_2a7f90de
+  h5ad_file: scRNA-seq_data_-_epithelial_cells_2a7f90de.h5ad
+  description: Dataset scRNA-seq_data_-_epithelial_cells_2a7f90de
+  runs:
+  - name: default
+    label_key: auto
+- name: scRNA-seq_data_-_fibroblasts_3d0d6923
+  h5ad_file: scRNA-seq_data_-_fibroblasts_3d0d6923.h5ad
+  description: Dataset scRNA-seq_data_-_fibroblasts_3d0d6923
+  runs:
+  - name: default
+    label_key: auto
+- name: scRNA-seq_of_human_retina_-_all_cells_be41a86a
+  h5ad_file: scRNA-seq_of_human_retina_-_all_cells_be41a86a.h5ad
+  description: Dataset scRNA-seq_of_human_retina_-_all_cells_be41a86a
+  runs:
+  - name: default
+    label_key: auto
+- name: Second_Trimester_Human_Developing_Brain_Regions_an_ae4f8ddd
+  h5ad_file: Second_Trimester_Human_Developing_Brain_Regions_an_ae4f8ddd.h5ad
+  description: Dataset Second_Trimester_Human_Developing_Brain_Regions_an_ae4f8ddd
+  runs:
+  - name: default
+    label_key: auto
+- name: Single-cell_RNA-seq_of_the_Adult_Human_Kidney__Ver_dea717d4
+  h5ad_file: Single-cell_RNA-seq_of_the_Adult_Human_Kidney__Ver_dea717d4.h5ad
+  description: Dataset Single-cell_RNA-seq_of_the_Adult_Human_Kidney__Ver_dea717d4
+  runs:
+  - name: default
+    label_key: auto
+- name: Single-cell_transcriptomic_datasets_of_Renal_cell_5af90777
+  h5ad_file: Single-cell_transcriptomic_datasets_of_Renal_cell_5af90777.h5ad
+  description: Dataset Single-cell_transcriptomic_datasets_of_Renal_cell_5af90777
+  runs:
+  - name: default
+    label_key: auto
+- name: Single-nucleus_cross-tissue_molecular_reference_ma_4ed927e9
+  h5ad_file: Single-nucleus_cross-tissue_molecular_reference_ma_4ed927e9.h5ad
+  description: Dataset Single-nucleus_cross-tissue_molecular_reference_ma_4ed927e9
+  runs:
+  - name: default
+    label_key: auto
+- name: Single-nucleus_RNA-seq_of_the_Adult_Human_Kidney___a12ccb9b
+  h5ad_file: Single-nucleus_RNA-seq_of_the_Adult_Human_Kidney___a12ccb9b.h5ad
+  description: Dataset Single-nucleus_RNA-seq_of_the_Adult_Human_Kidney___a12ccb9b
+  runs:
+  - name: default
+    label_key: auto
+- name: Single-nucleus_RNA_sequencing_of_M2__WT-THR_vs_DN-_1229ecc2
+  h5ad_file: Single-nucleus_RNA_sequencing_of_M2__WT-THR_vs_DN-_1229ecc2.h5ad
+  description: Dataset Single-nucleus_RNA_sequencing_of_M2__WT-THR_vs_DN-_1229ecc2
+  runs:
+  - name: default
+    label_key: auto
+- name: Skeletal_muscle_15d374d6
+  h5ad_file: Skeletal_muscle_15d374d6.h5ad
+  description: Dataset Skeletal_muscle_15d374d6
+  runs:
+  - name: default
+    label_key: auto
+- name: snRNA-seq_of_human_retina_-_retinal_ganglion_cell_95ce06a0
+  h5ad_file: snRNA-seq_of_human_retina_-_retinal_ganglion_cell_95ce06a0.h5ad
+  description: Dataset snRNA-seq_of_human_retina_-_retinal_ganglion_cell_95ce06a0
+  runs:
+  - name: default
+    label_key: auto
+- name: Spleen_72f4798d
+  h5ad_file: Spleen_72f4798d.h5ad
+  description: Dataset Spleen_72f4798d
+  runs:
+  - name: default
+    label_key: auto
+- name: Stromal_cells__all_non-immune_cells__d0c12af4
+  h5ad_file: Stromal_cells__all_non-immune_cells__d0c12af4.h5ad
+  description: Dataset Stromal_cells__all_non-immune_cells__d0c12af4
+  runs:
+  - name: default
+    label_key: auto
+- name: Supercluster__CGE_interneuron_bdb26abd
+  h5ad_file: Supercluster__CGE_interneuron_bdb26abd.h5ad
+  description: Dataset Supercluster__CGE_interneuron_bdb26abd
+  runs:
+  - name: default
+    label_key: auto
+- name: Supercluster__Deep-layer_intratelencephalic_98113e7e
+  h5ad_file: Supercluster__Deep-layer_intratelencephalic_98113e7e.h5ad
+  description: Dataset Supercluster__Deep-layer_intratelencephalic_98113e7e
+  runs:
+  - name: default
+    label_key: auto
+- name: Supercluster__MGE_interneuron_e4710a02
+  h5ad_file: Supercluster__MGE_interneuron_e4710a02.h5ad
+  description: Dataset Supercluster__MGE_interneuron_e4710a02
+  runs:
+  - name: default
+    label_key: auto
+- name: Supercluster__Oligodendrocyte_40e79234
+  h5ad_file: Supercluster__Oligodendrocyte_40e79234.h5ad
+  description: Dataset Supercluster__Oligodendrocyte_40e79234
+  runs:
+  - name: default
+    label_key: auto
+- name: Supercluster__Splatter_3a7f3ab4
+  h5ad_file: Supercluster__Splatter_3a7f3ab4.h5ad
+  description: Dataset Supercluster__Splatter_3a7f3ab4
+  runs:
+  - name: default
+    label_key: auto
+- name: Supercluster__Upper-layer_intratelencephalic_0325478a
+  h5ad_file: Supercluster__Upper-layer_intratelencephalic_0325478a.h5ad
+  description: Dataset Supercluster__Upper-layer_intratelencephalic_0325478a
+  runs:
+  - name: default
+    label_key: auto
+- name: Tabula_Sapiens_-_Epithelium_97a17473
+  h5ad_file: Tabula_Sapiens_-_Epithelium_97a17473.h5ad
+  description: Dataset Tabula_Sapiens_-_Epithelium_97a17473
+  runs:
+  - name: default
+    label_key: auto
+- name: Tabula_Sapiens_-_Stromal_a68b64d8
+  h5ad_file: Tabula_Sapiens_-_Stromal_a68b64d8.h5ad
+  description: Dataset Tabula_Sapiens_-_Stromal_a68b64d8
+  runs:
+  - name: default
+    label_key: auto
+- name: Telencephalon_675873e1
+  h5ad_file: Telencephalon_675873e1.h5ad
+  description: Dataset Telencephalon_675873e1
+  runs:
+  - name: default
+    label_key: auto
+- name: thymus_scRNA-seq_atlas_29244e1d
+  h5ad_file: thymus_scRNA-seq_atlas_29244e1d.h5ad
+  description: Dataset thymus_scRNA-seq_atlas_29244e1d
+  runs:
+  - name: default
+    label_key: auto
+- name: thymus_scRNA-seq_atlas_-_T_cell_subset_cfcec0ab
+  h5ad_file: thymus_scRNA-seq_atlas_-_T_cell_subset_cfcec0ab.h5ad
+  description: Dataset thymus_scRNA-seq_atlas_-_T_cell_subset_cfcec0ab
+  runs:
+  - name: default
+    label_key: auto
+- name: TI_immune_a37f857c
+  h5ad_file: TI_immune_a37f857c.h5ad
+  description: Dataset TI_immune_a37f857c
+  runs:
+  - name: default
+    label_key: auto
+- name: Time-resolved_Systems_Immunology_Reveals_a_Late_Ju_21d3e683
+  h5ad_file: Time-resolved_Systems_Immunology_Reveals_a_Late_Ju_21d3e683.h5ad
+  description: Dataset Time-resolved_Systems_Immunology_Reveals_a_Late_Ju_21d3e683
+  runs:
+  - name: default
+    label_key: auto
+- name: T___innate_lymphoid_cells_ae29ebd0
+  h5ad_file: T___innate_lymphoid_cells_ae29ebd0.h5ad
+  description: Dataset T___innate_lymphoid_cells_ae29ebd0
+  runs:
+  - name: default
+    label_key: auto
+- name: Total_-_Cells_of_the_human_intestinal_tract_mapped_80a2c5b6
+  h5ad_file: Total_-_Cells_of_the_human_intestinal_tract_mapped_80a2c5b6.h5ad
+  description: Dataset Total_-_Cells_of_the_human_intestinal_tract_mapped_80a2c5b6
+  runs:
+  - name: default
+    label_key: auto
+- name: UMAP_of_Cancer_Data_integration_7bb64315
+  h5ad_file: UMAP_of_Cancer_Data_integration_7bb64315.h5ad
+  description: Dataset UMAP_of_Cancer_Data_integration_7bb64315
+  runs:
+  - name: default
+    label_key: auto
+- name: Vascular___Cells_of_the_adult_human_heart_572f3f3e
+  h5ad_file: Vascular___Cells_of_the_adult_human_heart_572f3f3e.h5ad
+  description: Dataset Vascular___Cells_of_the_adult_human_heart_572f3f3e
+  runs:
+  - name: default
+    label_key: auto
+- name: Whole_dataset__Raw_counts_only_dcfd4feb
+  h5ad_file: Whole_dataset__Raw_counts_only_dcfd4feb.h5ad
+  description: Dataset Whole_dataset__Raw_counts_only_dcfd4feb
+  runs:
+  - name: default
+    label_key: auto
+slurm_presets:
+  small:
+    mem_gb: 64
+    cpus_per_task: 8
+    timeout_min: 240
+    partition: day
+  medium:
+    mem_gb: 128
+    cpus_per_task: 16
+    timeout_min: 360
+    partition: day
+  large:
+    mem_gb: 256
+    cpus_per_task: 16
+    timeout_min: 480
+    partition: day
+  bigmem:
+    mem_gb: 256
+    cpus_per_task: 16
+    timeout_min: 480
+    partition: day
+  # For large datasets (>200K cells) - uses general partition with 24hr limit
+  xlarge:
+    mem_gb: 256
+    cpus_per_task: 24
+    timeout_min: 1440
+    partition: general
