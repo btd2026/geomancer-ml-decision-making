@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Gallery</title>
+</head>
+<body>
+    <h1>Debug Gallery</h1>
+    <div id="status">Loading...</div>
+    <div id="data-info"></div>
+    <div id="gallery-content"></div>
+
+    <script>
+        console.log('Script started');
+
+        async function testLoad() {
+            const statusEl = document.getElementById('status');
+            const dataInfoEl = document.getElementById('data-info');
+            const galleryEl = document.getElementById('gallery-content');
+
+            try {
+                statusEl.textContent = 'Fetching gallery_data.json...';
+                console.log('Attempting to fetch gallery_data.json');
+
+                const response = await fetch('gallery_data.json');
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers));
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                statusEl.textContent = 'Parsing JSON...';
+                const data = await response.json();
+                console.log('Parsed data:', data);
+
+                statusEl.textContent = 'Success!';
+                dataInfoEl.innerHTML = `
+                    <h3>Data loaded successfully:</h3>
+                    <p>Datasets: ${Object.keys(data.datasets || {}).length}</p>
+                    <p>Runs: ${Object.keys(data.runs || {}).length}</p>
+                    <p>Generated at: ${data.generated_at}</p>
+                `;
+
+                // Show first few images
+                const runs = Object.values(data.runs || {});
+                const first5Runs = runs.slice(0, 3);
+
+                galleryEl.innerHTML = '<h3>First 3 Images:</h3>' +
+                    first5Runs.map(run => `
+                        <div style="border: 1px solid #ccc; margin: 10px; padding: 10px;">
+                            <h4>${run.gallery_run_id}</h4>
+                            <p>Dataset: ${run.dataset_name}</p>
+                            <p>Image path: ${run.image_path}</p>
+                            <img src="${run.image_path}" alt="${run.gallery_run_id}" style="max-width: 300px;"
+                                 onload="console.log('Image loaded:', this.src)"
+                                 onerror="console.error('Image failed:', this.src)">
+                        </div>
+                    `).join('');
+
+            } catch (error) {
+                console.error('Error:', error);
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.style.color = 'red';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded');
+            testLoad();
+        });
+    </script>
+</body>
+</html>
