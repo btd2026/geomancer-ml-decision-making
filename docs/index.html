@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geomancer ML Decision Making</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #4a5568;
+        }
+
+        .card p {
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .links-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .footer a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Geomancer ML Decision Making</h1>
+        <p>Single-cell embedding analysis with structure labeling and DSE metrics</p>
+    </div>
+
+    <div class="main-content">
+        <div class="content-grid">
+            <div class="card highlight">
+                <h2>🎨 PHATE Gallery</h2>
+                <p>Interactive gallery of PHATE embeddings with structure labeling, DSE metrics, and comprehensive visualization tools. Explore and annotate single-cell trajectory data.</p>
+                <a href="gallery.html" class="btn">
+                    <span>🚀</span>
+                    Launch Gallery
+                </a>
+            </div>
+
+            <div class="card">
+                <h2>📚 Documentation</h2>
+                <p>Comprehensive documentation including architecture guides, preprocessing pipelines, and setup instructions for the geomancer ML framework.</p>
+                <div class="links-grid">
+                    <a href="../documentation/ARCHITECTURE.md" class="btn btn-secondary">Architecture</a>
+                    <a href="../documentation/PREPROCESSING_PIPELINE.md" class="btn btn-secondary">Preprocessing</a>
+                    <a href="../documentation/SLURM_GUIDE.md" class="btn btn-secondary">SLURM Guide</a>
+                    <a href="../documentation/PHATE_CONFIG_GUIDE.md" class="btn btn-secondary">PHATE Config</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚙️ Configuration</h2>
+                <p>Setup guides and configuration documentation to help you get started with the geomancer ML decision-making framework.</p>
+                <div class="links-grid">
+                    <a href="../documentation/ADD_ALGORITHM_GUIDE.md" class="btn btn-secondary">Add Algorithm</a>
+                    <a href="../documentation/MANYLATENTS_SETUP.md" class="btn btn-secondary">ManyLatents</a>
+                    <a href="../documentation/SUBSAMPLING_STRATEGY.md" class="btn btn-secondary">Subsampling</a>
+                    <a href="../documentation/METRICS_EXPLAINED.md" class="btn btn-secondary">Metrics</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔬 Research</h2>
+                <p>Research documentation, summaries, and analysis results from the geomancer ML project.</p>
+                <div class="links-grid">
+                    <a href="../documentation/SUMMARY.md" class="btn btn-secondary">Project Summary</a>
+                    <a href="../documentation/CURRENT_STATUS.md" class="btn btn-secondary">Current Status</a>
+                    <a href="../documentation/results/" class="btn btn-secondary">Results</a>
+                    <a href="../documentation/thesis/" class="btn btn-secondary">Thesis</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>
+            <a href="https://github.com/btd2026/geomancer-ml-decision-making">View on GitHub</a> |
+            <a href="../ARCHITECTURE_SUMMARY.md">Architecture Summary</a> |
+            <a href="../README.md">Main README</a>
+        </p>
+    </div>
+</body>
+</html>
