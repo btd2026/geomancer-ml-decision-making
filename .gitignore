@@ -20,12 +20,12 @@ outputs/
 *.csv
 *.parquet
 
-# Images (except docs/gallery for GitHub Pages)
+# Images (except docs/images for GitHub Pages)
 *.png
 *.jpg
 *.jpeg
-!docs/gallery/images/*.png
-!docs/gallery/images/*.jpg
+!docs/images/*.png
+!docs/images/*.jpg
 
 *.sif
 
