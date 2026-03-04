@@ -18,7 +18,6 @@ let datasetRunIndex = {};
 let filters = {
     algo: 'all',
     status: 'all',
-    dse: 'all',
     search: ''
 };
 
@@ -136,19 +135,13 @@ function filterStackCards() {
                 (filters.status === 'labeled' && runLabels.length > 0) ||
                 (filters.status === 'unlabeled' && runLabels.length === 0);
 
-            // DSE filter - check if run has DSE metrics
-            const hasDSE = run.dse_metrics && run.dse_metrics.status === 'success';
-            const dseMatch = filters.dse === 'all' ||
-                (filters.dse === 'has_dse' && hasDSE) ||
-                (filters.dse === 'no_dse' && !hasDSE);
-
             // Search filter
             const searchMatch = !filters.search ||
                 dsName.toLowerCase().includes(filters.search) ||
                 run.runId.toLowerCase().includes(filters.search) ||
                 (run.label_key || '').toLowerCase().includes(filters.search);
 
-            if (algoMatch && statusMatch && dseMatch && searchMatch) {
+            if (algoMatch && statusMatch && searchMatch) {
                 hasMatch = true;
                 break;
             }
@@ -797,13 +790,6 @@ ${cssContent}
             <button class="filter-chip active" data-filter="status" data-value="all" onclick="setFilter('status', 'all', this)">All</button>
             <button class="filter-chip" data-filter="status" data-value="unlabeled" onclick="setFilter('status', 'unlabeled', this)">Unlabeled</button>
             <button class="filter-chip" data-filter="status" data-value="labeled" onclick="setFilter('status', 'labeled', this)">Labeled</button>
-        </div>
-
-        <div class="filter-group">
-            <span class="filter-label">DSE:</span>
-            <button class="filter-chip active" data-filter="dse" data-value="all" onclick="setFilter('dse', 'all', this)">All</button>
-            <button class="filter-chip" data-filter="dse" data-value="has_dse" onclick="setFilter('dse', 'has_dse', this)">Has DSE</button>
-            <button class="filter-chip" data-filter="dse" data-value="no_dse" onclick="setFilter('dse', 'no_dse', this)">No DSE</button>
         </div>
 
         <div class="actions">
