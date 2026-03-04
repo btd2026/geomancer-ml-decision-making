@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Test</title>
+</head>
+<body>
+    <h1>Testing Images</h1>
+    <div>
+        <h2>Sample Images:</h2>
+        <img src="images/017837df-b8be-4a4f-bc08-c5f14bd8815a.png" alt="Test Image 1" style="max-width: 300px; margin: 10px;">
+        <img src="images/0257045b-4992-412d-b361-a5265e5c1f0f.png" alt="Test Image 2" style="max-width: 300px; margin: 10px;">
+        <img src="images/04aca54d-6bb6-4448-ade0-371fa845812d.png" alt="Test Image 3" style="max-width: 300px; margin: 10px;">
+    </div>
+    <script>
+        // Test image loading
+        const images = document.querySelectorAll('img');
+        images.forEach((img, index) => {
+            img.onload = () => console.log(`Image ${index + 1} loaded successfully`);
+            img.onerror = () => console.log(`Image ${index + 1} failed to load`);
+        });
+    </script>
+</body>
+</html>
