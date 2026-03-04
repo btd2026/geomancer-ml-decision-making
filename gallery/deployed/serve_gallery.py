@@ -9,7 +9,7 @@ import os
 
 PORT = 8000
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-HTML_FILE = 'wandb_multiselect_gallery_old.html'
+HTML_FILE = 'wandb_multiselect_gallery.html'
 
 class GalleryHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     """Custom request handler that serves the gallery HTML."""

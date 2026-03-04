@@ -1,0 +1,60 @@
+# DSE Metrics Experiments Configuration
+# Compute Diffusion Spectral Entropy metrics on existing PHATE embeddings
+
+# Directory containing PHATE embedding results (subdirectories with embedding CSVs)
+embeddings_dir: /nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/phate_results
+
+# Output directory for DSE metrics results
+output_dir: /nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/dse_metrics_results
+
+# Wandb configuration (optional - set to null to disable)
+wandb:
+  entity: cesar-valdez-mcgill-university
+  project: manylatent-2026-brian
+
+# DSE metric parameters
+defaults:
+  dse:
+    # Output mode: "entropy", "eigenvalue_count", "eigenvalue_count_full", "eigenvalue_count_sweep"
+    output_mode: eigenvalue_count
+    # Diffusion times to evaluate (for eigenvalue_count mode)
+    t_high: [10, 50, 100, 200, 500]
+    # Numerical floor for eigenvalue counting
+    numerical_floor: 1.0e-6
+    # Kernel type: "knn" (adaptive bandwidth) or "dense" (global Gaussian)
+    kernel: knn
+    # Neighborhood size for kNN kernel
+    k: 15
+    # Density normalization: 0=graph Laplacian, 0.5=Fokker-Planck, 1.0=Laplace-Beltrami
+    alpha: 1.0
+    # Max samples (subsample if larger)
+    max_N: 10000
+    # Random seed for reproducible subsampling
+    random_seed: 42
+  slurm_preset: small
+
+# SLURM resource presets
+slurm_presets:
+  small:
+    mem_gb: 32
+    cpus_per_task: 4
+    timeout_min: 60
+    partition: day
+  medium:
+    mem_gb: 64
+    cpus_per_task: 8
+    timeout_min: 120
+    partition: day
+  large:
+    mem_gb: 128
+    cpus_per_task: 16
+    timeout_min: 240
+    partition: day
+
+# Datasets to process (optional - if empty, will auto-discover from embeddings_dir)
+# Each entry maps a dataset name to its embedding directory
+datasets: []
+# Example:
+# - name: my_dataset
+#   embedding_dir: /path/to/embeddings/my_dataset
+#   embedding_file: embeddings.csv  # optional, auto-detected if not specified

@@ -84,7 +84,7 @@ def create_phate_plot(
     ax.set_xlabel('PHATE 1')
     ax.set_ylabel('PHATE 2')
     ax.set_title(title)
-    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
+    # No legend in main plot - legend is saved separately as phate_plot_legend.png
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
@@ -293,6 +293,13 @@ def main():
         embedding_path = run_dir / "embedding.csv"
         embedding_df.to_csv(embedding_path)
         logger.info(f"Saved embedding to {embedding_path}")
+
+        # Save labels separately (for memory-efficient regeneration)
+        if labels is not None:
+            labels_path = run_dir / "labels.csv"
+            labels_df = pd.DataFrame({label_key: labels}, index=adata.obs_names)
+            labels_df.to_csv(labels_path)
+            logger.info(f"Saved labels to {labels_path}")
 
         # Create plots
         if labels is not None:

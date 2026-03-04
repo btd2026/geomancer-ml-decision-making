@@ -51,14 +51,18 @@ def scan_hierarchical_dataset(dataset_dir: Path) -> list[dict]:
         run_metadata = load_json(run_dir / "metadata.json") or {}
         colors_data = load_json(run_dir / "colors.json") or {}
         config_data = load_json(run_dir / "config.json") or {}
+        dse_metrics = load_json(run_dir / "dse_metrics.json") or {}
 
-        # Find PHATE plot image
+        # Find PHATE plot image (prefer without legend)
         image_path = None
-        for pattern in ["phate_plot.png", "phate_plot_*.png", "*phate*.png"]:
-            matches = list(run_dir.glob(pattern))
-            if matches:
-                image_path = matches[0]
-                break
+        all_matches = list(run_dir.glob("*phate*.png"))
+        if all_matches:
+            # Prefer files without "legend" in the name
+            non_legend = [m for m in all_matches if "legend" not in m.name.lower()]
+            if non_legend:
+                image_path = non_legend[0]
+            else:
+                image_path = all_matches[0]
 
         # Build colors dict - convert from various formats
         colors = colors_data.get("colors", {})
@@ -102,6 +106,9 @@ def scan_hierarchical_dataset(dataset_dir: Path) -> list[dict]:
             "image_filename": image_path.name if image_path else None,
             "has_image": image_path is not None,
 
+            # DSE metrics (if available)
+            "dse_metrics": dse_metrics if dse_metrics else None,
+
             # Source paths
             "source_dir": str(run_dir),
         }
@@ -117,29 +124,71 @@ def scan_legacy_uuid_directory(uuid_dir: Path) -> dict | None:
 
     Returns a single run data dictionary or None if not valid.
     """
-    # Look for metadata file
-    metadata_files = list(uuid_dir.glob("*.json"))
-    if not metadata_files:
+    uuid_name = uuid_dir.name
+
+    # Find image file
+    image_files = list(uuid_dir.glob("embedding_plot_*.png"))
+    if not image_files:
         return None
 
-    # Try to extract info from filenames
-    dataset_name = None
-    label_key = None
+    # Use the most recent image
+    image_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+    image_path = image_files[0]
 
-    for f in uuid_dir.iterdir():
-        name = f.name.lower()
-        if "phate" in name and f.suffix == ".png":
-            # Extract dataset name from filename pattern
-            # e.g., embedding_plot_phate_k100_017837df-b8be-4a4f-bc08-c5f14bd8815a.png_20251117_091624.png
-            parts = f.stem.split("_")
-            for i, part in enumerate(parts):
-                if part == "phate" and i > 0:
-                    # This might be a label_key
-                    pass
+    # Load DSE metrics if available
+    dse_metrics = load_json(uuid_dir / "dse_metrics.json") or {}
 
-    # For legacy directories, we need to get info from the gallery_data.json
-    # that was already created from WandB metadata
-    return None  # Legacy directories are handled separately
+    # Load colors if available
+    colors_data = load_json(uuid_dir / "colors.json") or {}
+    colors = colors_data.get("colors", {})
+    if isinstance(colors, list):
+        colors = {f"Category {i+1}": c for i, c in enumerate(colors)}
+    label_key = colors_data.get("label_key", "unknown")
+
+    # Try to get metadata from hydra config
+    n_obs = None
+    n_vars = None
+    h5ad_path = ""
+    hydra_config = uuid_dir / ".hydra" / "config.yaml"
+    if hydra_config.exists():
+        try:
+            import yaml
+            with open(hydra_config) as f:
+                config = yaml.safe_load(f)
+            h5ad_path = config.get("data", {}).get("adata_path", "")
+        except Exception:
+            pass
+
+    # Try to load dataset info from h5ad
+    if h5ad_path and os.path.exists(h5ad_path):
+        try:
+            import scanpy as sc
+            adata = sc.read_h5ad(h5ad_path)
+            n_obs = adata.n_obs
+            n_vars = adata.n_vars
+        except Exception:
+            pass
+
+    run_data = {
+        "gallery_run_id": uuid_name,
+        "dataset_name": uuid_name,
+        "dataset_description": f"Dataset {uuid_name}",
+        "n_obs": n_obs,
+        "n_vars": n_vars,
+        "h5ad_path": h5ad_path,
+        "run_id": uuid_name,
+        "algorithm_type": "phate",
+        "label_key": label_key,
+        "n_categories": len(colors) if colors else 0,
+        "colors": colors,
+        "categories": list(colors.keys()) if colors else [],
+        "image_filename": image_path.name,
+        "has_image": True,
+        "dse_metrics": dse_metrics if dse_metrics else None,
+        "source_dir": str(uuid_dir),
+    }
+
+    return run_data
 
 
 def generate_gallery_data(
@@ -192,16 +241,24 @@ def generate_gallery_data(
 
         if runs:
             dataset_name = runs[0].get("dataset_name", item.name)
+
+            # Only include completed runs (those with images)
+            completed_runs = [r for r in runs if r.get("has_image") and r.get("image_filename")]
+
+            if not completed_runs:
+                # Skip this dataset if no completed runs
+                continue
+
             gallery_data["datasets"][dataset_name] = {
                 "name": dataset_name,
-                "description": runs[0].get("dataset_description", ""),
-                "n_obs": runs[0].get("n_obs"),
-                "n_vars": runs[0].get("n_vars"),
-                "h5ad_path": runs[0].get("h5ad_path", ""),
+                "description": completed_runs[0].get("dataset_description", ""),
+                "n_obs": completed_runs[0].get("n_obs"),
+                "n_vars": completed_runs[0].get("n_vars"),
+                "h5ad_path": completed_runs[0].get("h5ad_path", ""),
                 "runs": [],
             }
 
-            for run_data in runs:
+            for run_data in completed_runs:
                 gallery_run_id = run_data["gallery_run_id"]
                 gallery_data["datasets"][dataset_name]["runs"].append(gallery_run_id)
                 gallery_data["runs"][gallery_run_id] = run_data

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHATE Gallery - Structure Labeling</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="header-top">
+                <div>
+                    <h1>PHATE Gallery</h1>
+                    <p class="header-subtitle">Structure labeling for single-cell embeddings</p>
+                </div>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span class="stat-value" id="labeledCount">0</span>
+                    <span class="stat-label">/ <span id="totalCount">0</span> labeled</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="multiCount">0</span>
+                    <span class="stat-label">multi-structure</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="flaggedCount">0</span>
+                    <span class="stat-label">flagged</span>
+                </div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <input type="text" class="search-box" id="searchBox" placeholder="Search datasets or runs..." onkeyup="applyFilters()">
+
+        <div class="filter-group">
+            <span class="filter-label">Algorithm:</span>
+            <button class="filter-chip active" data-filter="algo" data-value="all" onclick="setFilter('algo', 'all', this)">All</button>
+            <button class="filter-chip" data-filter="algo" data-value="phate" onclick="setFilter('algo', 'phate', this)">PHATE</button>
+            <button class="filter-chip" data-filter="algo" data-value="reeb" onclick="setFilter('algo', 'reeb', this)">Reeb</button>
+            <button class="filter-chip" data-filter="algo" data-value="dse" onclick="setFilter('algo', 'dse', this)">DSE</button>
+        </div>
+
+        <div class="filter-group">
+            <span class="filter-label">Status:</span>
+            <button class="filter-chip active" data-filter="status" data-value="all" onclick="setFilter('status', 'all', this)">All</button>
+            <button class="filter-chip" data-filter="status" data-value="unlabeled" onclick="setFilter('status', 'unlabeled', this)">Unlabeled</button>
+            <button class="filter-chip" data-filter="status" data-value="labeled" onclick="setFilter('status', 'labeled', this)">Labeled</button>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" onclick="exportToZip()">
+                <span>📦</span> Export ZIP
+            </button>
+            <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">
+                <span>📥</span> Import
+            </button>
+            <input type="file" id="importFile" accept=".zip,.json" style="display:none" onchange="importFromFile(this)">
+            <button class="btn btn-danger" onclick="if(confirm('Clear all labels, annotations, and notes?')) clearAll()">
+                Clear All
+            </button>
+        </div>
+    </div>
+
+    <div class="gallery" id="gallery">
+        <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: var(--text-muted);">
+            Loading gallery data...
+        </div>
+    </div>
+
+    <div class="image-modal" id="imageModal" onclick="closeModal()">
+        <span class="modal-close">&times;</span>
+        <img id="modalImage" src="" alt="PHATE visualization">
+    </div>
+
+    <script src="gallery.js"></script>
+</body>
+</html>

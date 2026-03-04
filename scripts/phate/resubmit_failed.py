@@ -78,12 +78,12 @@ failed_datasets = [
     "Supercluster__Upper-layer_intratelencephalic_0325478a",
 ]
 
-# XLarge resources (general partition allows 24hr)
+# XLarge resources (week partition allows 24hr)
 resources = {
     "mem_gb": 256,
     "cpus_per_task": 24,
     "timeout_min": 1440,  # 24 hours for large datasets
-    "partition": "general"
+    "partition": "week"
 }
 
 configs_dir = Path("/nfs/roberts/project/pi_sk2433/shared/Geomancer_2025_Data/phate_results/_configs")

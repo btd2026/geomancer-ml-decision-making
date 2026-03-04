@@ -647,10 +647,10 @@ slurm_presets:
     mem_gb: 256
     cpus_per_task: 16
     timeout_min: 480
-    partition: day
-  # For large datasets (>200K cells) - uses general partition with 24hr limit
+    partition: week
+  # For large datasets (>200K cells) - uses week partition with 24hr limit
   xlarge:
     mem_gb: 256
     cpus_per_task: 24
     timeout_min: 1440
-    partition: general
+    partition: week
