@@ -49,16 +49,16 @@ const DatasetCard = ({ dataset, runs }) => {
     const modal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
     if (modal && modalImage) {
-      modalImage.src = runData.image_url;
+      modalImage.src = runData.image_path;
       modal.classList.add('open');
     }
   };
 
   // Algorithm badge
   const getAlgoBadge = () => {
-    const config = runData.config || {};
-    if (config.algorithm) {
-      const algo = config.algorithm.toLowerCase();
+    
+    if (runData.algorithm_type) {
+      const algo = runData.algorithm_type.toLowerCase();
       return (
         <span className={`algo-badge ${algo}`}>
           {algo}
@@ -107,7 +107,7 @@ const DatasetCard = ({ dataset, runs }) => {
       </div>
 
       <img
-        src={runData.image_url}
+        src={runData.image_path}
         alt={`PHATE visualization for ${dataset}`}
         className="stack-run-image"
         onClick={openModal}

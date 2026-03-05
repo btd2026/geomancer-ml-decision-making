@@ -23,7 +23,7 @@ const AppContent = () => {
         // Build dataset run index
         const datasetRunIndex = {};
         Object.keys(wandbData).forEach(runId => {
-          const dataset = wandbData[runId].dataset;
+          const dataset = wandbData[runId].dataset_name || 'Unknown';
           if (!datasetRunIndex[dataset]) {
             datasetRunIndex[dataset] = [];
           }

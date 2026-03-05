@@ -22,7 +22,7 @@ const Gallery = () => {
 
         // Algorithm filter
         if (algo !== 'all') {
-          const runAlgo = runData.config?.algorithm?.toLowerCase();
+          const runAlgo = runData.algorithm_type?.toLowerCase();
           if (runAlgo !== algo) return false;
         }
 
