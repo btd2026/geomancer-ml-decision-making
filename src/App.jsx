@@ -17,12 +17,13 @@ const AppContent = () => {
     const loadGalleryData = async () => {
       try {
         const response = await fetch('/geomancer-ml-decision-making/gallery_data.json');
-        const data = await response.json();
+        const galleryData = await response.json();
+        const wandbData = galleryData.runs || {};
 
         // Build dataset run index
         const datasetRunIndex = {};
-        Object.keys(data).forEach(runId => {
-          const dataset = data[runId].dataset;
+        Object.keys(wandbData).forEach(runId => {
+          const dataset = wandbData[runId].dataset;
           if (!datasetRunIndex[dataset]) {
             datasetRunIndex[dataset] = [];
           }
@@ -32,13 +33,13 @@ const AppContent = () => {
         dispatch({
           type: actionTypes.SET_GALLERY_DATA,
           payload: {
-            galleryData: data,
-            wandbData: data,
+            galleryData,
+            wandbData,
             datasetRunIndex
           }
         });
 
-        console.log('Gallery data loaded:', Object.keys(data).length, 'runs');
+        console.log('Gallery data loaded:', Object.keys(wandbData).length, 'runs, ', Object.keys(galleryData.datasets || {}).length, 'datasets');
       } catch (error) {
         console.error('Error loading gallery data:', error);
         dispatch({ type: actionTypes.SET_LOADING, payload: false });
