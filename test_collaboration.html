@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Collaboration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 8px 16px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .primary { background-color: #007bff; color: white; }
+        .secondary { background-color: #6c757d; color: white; }
+        #logs { max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>🤝 PHATE Gallery Collaboration Test</h1>
+
+    <div class="test-section info">
+        <h3>📋 Test Instructions</h3>
+        <ol>
+            <li>Open this page in two browser tabs/windows</li>
+            <li>Test adding labels in one tab and verify they appear in the other</li>
+            <li>Check that BroadcastChannel is working for instant updates</li>
+            <li>Verify conflict resolution with simultaneous changes</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h3>🔧 Test Controls</h3>
+        <button class="primary" onclick="testAddLabel()">Add Test Label</button>
+        <button class="primary" onclick="testAddNote()">Add Test Note</button>
+        <button class="primary" onclick="testFlagImage()">Flag Test Image</button>
+        <button class="secondary" onclick="clearTestData()">Clear Test Data</button>
+        <button class="secondary" onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Current State</h3>
+        <div id="state-display">Loading...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>📜 Activity Logs</h3>
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        // Initialize collaboration system (from gallery.js)
+        let labels = {};
+        let annotations = { density: {}, quality: {} };
+        let notes = {};
+        let flagged = new Set();
+        let datasetRunIndex = {};
+
+        let collabChannel = null;
+        let sessionId = null;
+        let isUpdatingFromRemote = false;
+
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff';
+            logs.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
+            logs.scrollTop = logs.scrollHeight;
+            console.log(message);
+        }
+
+        function getSessionId() {
+            if (!sessionId) {
+                sessionId = localStorage.getItem('phateGallerySessionId') ||
+                           'session_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('phateGallerySessionId', sessionId);
+            }
+            return sessionId;
+        }
+
+        function saveToStorage() {
+            if (isUpdatingFromRemote) return;
+
+            const timestamp = Date.now();
+            const currentSessionId = getSessionId();
+            const saveData = {
+                labels,
+                annotations,
+                notes,
+                flagged: Array.from(flagged),
+                datasetRunIndex,
+                lastModified: timestamp,
+                sessionId: currentSessionId
+            };
+
+            // Save main data
+            localStorage.setItem('testGalleryData', JSON.stringify(saveData));
+            localStorage.setItem('testGalleryLastModified', timestamp.toString());
+
+            // Save per-session data
+            localStorage.setItem(`testGallery_${currentSessionId}_lastModified`, timestamp.toString());
+            localStorage.setItem(`testGallery_${currentSessionId}_data`, JSON.stringify(saveData));
+
+            log(`💾 Saved data for session ${currentSessionId.substring(0, 8)}...`, 'success');
+
+            // Broadcast changes
+            if (collabChannel) {
+                collabChannel.postMessage({
+                    type: 'UPDATE',
+                    sessionId: currentSessionId,
+                    data: saveData,
+                    timestamp: timestamp
+                });
+                log(`📡 Broadcasted update to other tabs`, 'info');
+            }
+
+            updateStateDisplay();
+        }
+
+        async function handleRemoteUpdate(updateData) {
+            if (updateData.sessionId === sessionId || updateData.type !== 'UPDATE') return;
+
+            log(`🔄 Received update from session ${updateData.sessionId.substring(0, 8)}...`, 'info');
+
+            isUpdatingFromRemote = true;
+
+            try {
+                const localTimestamp = parseInt(localStorage.getItem('testGalleryLastModified') || '0');
+                const remoteTimestamp = updateData.timestamp;
+
+                if (remoteTimestamp > localTimestamp) {
+                    // Merge data
+                    labels = { ...labels, ...updateData.data.labels };
+                    annotations = {
+                        density: { ...annotations.density, ...updateData.data.annotations.density },
+                        quality: { ...annotations.quality, ...updateData.data.annotations.quality }
+                    };
+                    notes = { ...notes, ...updateData.data.notes };
+                    flagged = new Set([...flagged, ...updateData.data.flagged]);
+                    datasetRunIndex = { ...datasetRunIndex, ...updateData.data.datasetRunIndex };
+
+                    // Update storage
+                    localStorage.setItem('testGalleryData', JSON.stringify({
+                        labels, annotations, notes, flagged: Array.from(flagged), datasetRunIndex,
+                        lastModified: remoteTimestamp, sessionId: updateData.sessionId
+                    }));
+                    localStorage.setItem('testGalleryLastModified', remoteTimestamp.toString());
+
+                    log(`✅ Successfully merged remote changes`, 'success');
+                    updateStateDisplay();
+                } else {
+                    log(`⏭️ Remote data is older, keeping local changes`, 'info');
+                }
+            } catch (error) {
+                log(`❌ Error handling remote update: ${error.message}`, 'error');
+            } finally {
+                isUpdatingFromRemote = false;
+            }
+        }
+
+        function initializeCollaboration() {
+            sessionId = getSessionId();
+            log(`🚀 Initializing collaboration for session ${sessionId.substring(0, 8)}...`, 'info');
+
+            try {
+                collabChannel = new BroadcastChannel('test-phate-gallery-collab');
+                collabChannel.onmessage = async (event) => {
+                    await handleRemoteUpdate(event.data);
+                };
+                log(`✅ BroadcastChannel initialized successfully`, 'success');
+            } catch (error) {
+                log(`❌ BroadcastChannel failed: ${error.message}`, 'error');
+            }
+
+            // Load existing data
+            const existingData = localStorage.getItem('testGalleryData');
+            if (existingData) {
+                const data = JSON.parse(existingData);
+                labels = data.labels || {};
+                annotations = data.annotations || { density: {}, quality: {} };
+                notes = data.notes || {};
+                flagged = new Set(data.flagged || []);
+                datasetRunIndex = data.datasetRunIndex || {};
+                log(`📁 Loaded existing data`, 'info');
+            }
+
+            updateStateDisplay();
+        }
+
+        function updateStateDisplay() {
+            const display = document.getElementById('state-display');
+            const labelCount = Object.keys(labels).length;
+            const noteCount = Object.keys(notes).length;
+            const flaggedCount = flagged.size;
+
+            display.innerHTML = `
+                <strong>Session ID:</strong> ${sessionId ? sessionId.substring(0, 8) + '...' : 'Not initialized'}<br>
+                <strong>Labels:</strong> ${labelCount}<br>
+                <strong>Notes:</strong> ${noteCount}<br>
+                <strong>Flagged:</strong> ${flaggedCount}<br>
+                <strong>BroadcastChannel:</strong> ${collabChannel ? '✅ Active' : '❌ Inactive'}
+            `;
+        }
+
+        // Test functions
+        function testAddLabel() {
+            const runId = 'test_run_' + Math.random().toString(36).substr(2, 5);
+            const labelType = ['clusters', 'bifurcation', 'trajectory', 'surface'][Math.floor(Math.random() * 4)];
+            labels[runId] = labelType;
+            saveToStorage();
+            log(`🏷️ Added label: ${runId} = ${labelType}`, 'success');
+        }
+
+        function testAddNote() {
+            const runId = 'test_run_' + Math.random().toString(36).substr(2, 5);
+            const noteText = `Test note added at ${new Date().toLocaleTimeString()}`;
+            notes[runId] = noteText;
+            saveToStorage();
+            log(`📝 Added note: ${runId} = "${noteText}"`, 'success');
+        }
+
+        function testFlagImage() {
+            const runId = 'test_run_' + Math.random().toString(36).substr(2, 5);
+            flagged.add(runId);
+            saveToStorage();
+            log(`🚩 Flagged image: ${runId}`, 'success');
+        }
+
+        function clearTestData() {
+            labels = {};
+            notes = {};
+            flagged = new Set();
+            annotations = { density: {}, quality: {} };
+            datasetRunIndex = {};
+
+            localStorage.removeItem('testGalleryData');
+            localStorage.removeItem('testGalleryLastModified');
+
+            // Clear session data
+            const mySessionId = getSessionId();
+            localStorage.removeItem(`testGallery_${mySessionId}_lastModified`);
+            localStorage.removeItem(`testGallery_${mySessionId}_data`);
+
+            updateStateDisplay();
+            log(`🧹 Cleared all test data`, 'info');
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initializeCollaboration);
+    </script>
+</body>
+</html>

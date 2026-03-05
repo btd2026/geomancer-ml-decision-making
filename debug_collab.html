@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Collaboration</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-box { border: 1px solid #ddd; padding: 15px; margin: 10px 0; background: #f8f9fa; }
+        button { padding: 8px 16px; margin: 5px; }
+        .logs { height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; font-family: monospace; background: white; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>🐛 Debug Cross-Tab Collaboration</h1>
+
+    <div class="debug-box">
+        <h3>Session Info</h3>
+        <div id="session-info">Loading...</div>
+    </div>
+
+    <div class="debug-box">
+        <h3>BroadcastChannel Test</h3>
+        <button onclick="testBroadcast()">Send Test Message</button>
+        <button onclick="testSave()">Test Save & Broadcast</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div class="debug-box">
+        <h3>Current Data</h3>
+        <div id="current-data">No data</div>
+    </div>
+
+    <div class="debug-box">
+        <h3>Debug Logs</h3>
+        <div id="logs" class="logs"></div>
+    </div>
+
+    <script>
+        let collabChannel = null;
+        let sessionId = null;
+        let testData = { labels: {}, notes: {} };
+
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            logs.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logs.scrollTop = logs.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+
+        function getSessionId() {
+            if (!sessionId) {
+                sessionId = localStorage.getItem('debugSessionId') ||
+                           'debug_' + Math.random().toString(36).substr(2, 8);
+                localStorage.setItem('debugSessionId', sessionId);
+            }
+            return sessionId;
+        }
+
+        function updateDisplay() {
+            document.getElementById('session-info').innerHTML = `
+                <strong>Session ID:</strong> ${getSessionId()}<br>
+                <strong>BroadcastChannel:</strong> ${collabChannel ? '✅ Connected' : '❌ Not Connected'}<br>
+                <strong>Browser Support:</strong> ${typeof BroadcastChannel !== 'undefined' ? '✅ Yes' : '❌ No'}
+            `;
+
+            document.getElementById('current-data').innerHTML = `
+                <strong>Labels:</strong> ${Object.keys(testData.labels).length}<br>
+                <strong>Notes:</strong> ${Object.keys(testData.notes).length}<br>
+                <strong>Last Update:</strong> ${localStorage.getItem('debugLastUpdate') || 'Never'}
+            `;
+        }
+
+        function initCollab() {
+            const mySessionId = getSessionId();
+            log(`🚀 Initializing collaboration for ${mySessionId}`, 'info');
+
+            // Check BroadcastChannel support
+            if (typeof BroadcastChannel === 'undefined') {
+                log('❌ BroadcastChannel not supported in this browser', 'error');
+                return;
+            }
+
+            try {
+                collabChannel = new BroadcastChannel('debug-collab-test');
+                log('✅ BroadcastChannel created successfully', 'success');
+
+                collabChannel.onmessage = (event) => {
+                    log(`📩 Received message: ${JSON.stringify(event.data)}`, 'info');
+
+                    if (event.data.sessionId !== mySessionId) {
+                        log(`🔄 Processing update from ${event.data.sessionId}`, 'info');
+
+                        if (event.data.type === 'DATA_UPDATE') {
+                            // Merge data
+                            testData.labels = { ...testData.labels, ...event.data.data.labels };
+                            testData.notes = { ...testData.notes, ...event.data.data.notes };
+
+                            // Update localStorage
+                            localStorage.setItem('debugTestData', JSON.stringify(testData));
+                            localStorage.setItem('debugLastUpdate', new Date().toISOString());
+
+                            log('✅ Data merged from remote update', 'success');
+                            updateDisplay();
+                        }
+                    } else {
+                        log('⏭️ Ignoring message from own session', 'info');
+                    }
+                };
+
+                collabChannel.onerror = (error) => {
+                    log(`❌ BroadcastChannel error: ${error.message}`, 'error');
+                };
+
+                log('👂 Listening for messages...', 'info');
+
+            } catch (error) {
+                log(`❌ Failed to initialize BroadcastChannel: ${error.message}`, 'error');
+            }
+
+            // Load existing data
+            const existingData = localStorage.getItem('debugTestData');
+            if (existingData) {
+                testData = JSON.parse(existingData);
+                log('📁 Loaded existing test data', 'info');
+            }
+
+            updateDisplay();
+        }
+
+        function testBroadcast() {
+            if (!collabChannel) {
+                log('❌ No BroadcastChannel available', 'error');
+                return;
+            }
+
+            const message = {
+                type: 'TEST_MESSAGE',
+                sessionId: getSessionId(),
+                timestamp: Date.now(),
+                message: 'Hello from ' + getSessionId()
+            };
+
+            try {
+                collabChannel.postMessage(message);
+                log(`📤 Sent test message: ${JSON.stringify(message)}`, 'success');
+            } catch (error) {
+                log(`❌ Failed to send message: ${error.message}`, 'error');
+            }
+        }
+
+        function testSave() {
+            const runId = 'test_' + Math.random().toString(36).substr(2, 4);
+            const labelType = 'clusters';
+
+            // Update local data
+            testData.labels[runId] = labelType;
+            testData.notes[runId] = `Note from ${getSessionId()} at ${new Date().toLocaleTimeString()}`;
+
+            // Save to localStorage
+            localStorage.setItem('debugTestData', JSON.stringify(testData));
+            localStorage.setItem('debugLastUpdate', new Date().toISOString());
+
+            log(`💾 Saved local data: ${runId} = ${labelType}`, 'success');
+
+            // Broadcast update
+            if (collabChannel) {
+                const updateMessage = {
+                    type: 'DATA_UPDATE',
+                    sessionId: getSessionId(),
+                    timestamp: Date.now(),
+                    data: testData
+                };
+
+                try {
+                    collabChannel.postMessage(updateMessage);
+                    log(`📤 Broadcasted data update`, 'success');
+                } catch (error) {
+                    log(`❌ Failed to broadcast: ${error.message}`, 'error');
+                }
+            }
+
+            updateDisplay();
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🌟 Debug page loaded', 'info');
+            initCollab();
+        });
+    </script>
+</body>
+</html>

@@ -25,11 +25,10 @@ let filters = {
 let autosaveTimeout = null;
 let lastSaveTime = 0;
 
-// Live update checking system
-let updateCheckInterval = null;
-let lastUpdateCheck = 0;
-let remoteDataHash = null;
-let isCheckingForUpdates = false;
+// Live collaboration system - BroadcastChannel for real-time updates
+let collabChannel = null;
+let sessionId = null;
+let isUpdatingFromRemote = false;
 
 const primaryTypes = ['clusters', 'simple_traj', 'bifurcation', 'multi_branch', 'complex_tree', 'cyclic', 'surface', 'batch_effect'];
 
@@ -61,7 +60,11 @@ async function loadData() {
 }
 
 function saveToStorage() {
+    // Skip saving if this is triggered by a remote update to avoid loops
+    if (isUpdatingFromRemote) return;
+
     const timestamp = Date.now();
+    const currentSessionId = getSessionId();
     const saveData = {
         labels,
         annotations,
@@ -69,9 +72,10 @@ function saveToStorage() {
         flagged: Array.from(flagged),
         datasetRunIndex,
         lastModified: timestamp,
-        sessionId: getSessionId()
+        sessionId: currentSessionId
     };
 
+    // Save main data
     localStorage.setItem('phateGalleryLabels', JSON.stringify(labels));
     localStorage.setItem('phateGalleryAnnotations', JSON.stringify(annotations));
     localStorage.setItem('phateGalleryNotes', JSON.stringify(notes));
@@ -80,11 +84,32 @@ function saveToStorage() {
     localStorage.setItem('phateGalleryLastModified', timestamp.toString());
     localStorage.setItem('phateGalleryFullData', JSON.stringify(saveData));
 
+    // Save per-session data that getAllKnownSessions() looks for
+    localStorage.setItem(`phateGallery_${currentSessionId}_lastModified`, timestamp.toString());
+    localStorage.setItem(`phateGallery_${currentSessionId}_data`, JSON.stringify(saveData));
+
     lastSaveTime = timestamp;
     showSaveIndicator();
+
+    // Broadcast changes to other tabs via BroadcastChannel
+    if (collabChannel) {
+        const message = {
+            type: 'UPDATE',
+            sessionId: currentSessionId,
+            data: saveData,
+            timestamp: timestamp
+        };
+        console.log('📤 Broadcasting update:', message);
+        collabChannel.postMessage(message);
+        console.log('✅ Message sent via BroadcastChannel');
+    } else {
+        console.warn('⚠️ No BroadcastChannel available for broadcasting');
+    }
 }
 
 function autosave() {
+    console.log('💾 Autosave triggered');
+
     // Clear any existing timeout
     if (autosaveTimeout) {
         clearTimeout(autosaveTimeout);
@@ -92,6 +117,7 @@ function autosave() {
 
     // Save after a short delay to avoid excessive saves during rapid changes
     autosaveTimeout = setTimeout(() => {
+        console.log('💾 Executing autosave...');
         saveToStorage();
         console.log('🔄 Autosaved gallery state for collaboration');
     }, 300); // 300ms delay
@@ -960,6 +986,28 @@ function clearAll() {
 // ============================================
 
 function initializeCollaboration() {
+    // Initialize session ID
+    sessionId = getSessionId();
+
+    // Initialize BroadcastChannel for cross-tab communication
+    try {
+        collabChannel = new BroadcastChannel('phate-gallery-collab');
+
+        // Set up event listener for incoming updates (always waiting)
+        collabChannel.onmessage = async (event) => {
+            console.log('📩 BroadcastChannel received message:', event.data);
+            await handleRemoteUpdate(event.data);
+        };
+
+        console.log('🚀 BroadcastChannel initialized for real-time collaboration');
+        console.log('🎯 Channel name: phate-gallery-collab');
+        console.log('📡 Listening for messages from other tabs...');
+    } catch (error) {
+        console.warn('BroadcastChannel not supported, falling back to localStorage polling');
+        // Fallback for older browsers
+        startLiveUpdateChecking();
+    }
+
     // Update collaboration status
     const indicator = document.getElementById('collabIndicator');
     if (indicator) {
@@ -970,13 +1018,14 @@ function initializeCollaboration() {
     // Track user activity for collaboration awareness
     trackUserActivity();
 
-    // Start live update checking
-    startLiveUpdateChecking();
-
     // Show welcome message for collaboration
     setTimeout(() => {
         console.log('🤝 Live collaboration enabled! All changes autosave automatically.');
-        console.log('🔄 Checking for updates from other users every 5 seconds.');
+        if (collabChannel) {
+            console.log('⚡ Real-time updates via BroadcastChannel - changes appear instantly!');
+        } else {
+            console.log('🔄 Checking for updates from other users every 5 seconds.');
+        }
         console.log('📊 Share this URL with collaborators to work together in real-time.');
     }, 1000);
 }
@@ -1048,49 +1097,117 @@ function getSessionId() {
     return sessionId;
 }
 
+async function handleRemoteUpdate(updateData) {
+    console.log('🔍 handleRemoteUpdate called with:', updateData);
+
+    // Ignore updates from our own session
+    if (updateData.sessionId === sessionId) {
+        console.log('⏭️ Ignoring update from own session:', sessionId);
+        return;
+    }
+
+    // Ignore non-update messages
+    if (updateData.type !== 'UPDATE') {
+        console.log('⏭️ Ignoring non-UPDATE message type:', updateData.type);
+        return;
+    }
+
+    console.log(`🔄 Processing update from session ${updateData.sessionId.substring(0, 8)}...`);
+
+    // Set flag to prevent save loops
+    isUpdatingFromRemote = true;
+
+    try {
+        // Show update notification
+        showUpdateNotification(`Update from ${updateData.sessionId.substring(0, 8)}...`);
+
+        // Get current timestamp to detect conflicts
+        const localTimestamp = parseInt(localStorage.getItem('phateGalleryLastModified') || '0');
+        const remoteTimestamp = updateData.timestamp;
+
+        // Merge data with simple last-write-wins strategy
+        if (remoteTimestamp > localTimestamp) {
+            // Remote data is newer, apply all changes
+            labels = { ...labels, ...updateData.data.labels };
+            annotations = {
+                density: { ...annotations.density, ...updateData.data.annotations.density },
+                quality: { ...annotations.quality, ...updateData.data.annotations.quality }
+            };
+            notes = { ...notes, ...updateData.data.notes };
+            flagged = new Set([...flagged, ...updateData.data.flagged]);
+            datasetRunIndex = { ...datasetRunIndex, ...updateData.data.datasetRunIndex };
+
+            // Save merged data to localStorage (without broadcasting)
+            localStorage.setItem('phateGalleryLabels', JSON.stringify(labels));
+            localStorage.setItem('phateGalleryAnnotations', JSON.stringify(annotations));
+            localStorage.setItem('phateGalleryNotes', JSON.stringify(notes));
+            localStorage.setItem('phateGalleryFlagged', JSON.stringify(Array.from(flagged)));
+            localStorage.setItem('phateGalleryRunIndex', JSON.stringify(datasetRunIndex));
+
+            // Update our local timestamp to match the remote one
+            localStorage.setItem('phateGalleryLastModified', remoteTimestamp.toString());
+
+            // Update the UI to reflect changes
+            updateStats();
+            renderGallery(); // Re-render to show new labels/flags
+
+            console.log('✅ Successfully merged remote changes');
+        } else {
+            console.log('⏭️ Remote data is older, keeping local changes');
+        }
+
+    } catch (error) {
+        console.error('Error handling remote update:', error);
+    } finally {
+        // Clear the flag to resume normal saving
+        isUpdatingFromRemote = false;
+
+        // Clear update notification after a delay
+        setTimeout(() => {
+            const notification = document.getElementById('update-notification');
+            if (notification) {
+                notification.remove();
+            }
+        }, 3000);
+    }
+}
+
 function startLiveUpdateChecking() {
-    // Check for updates every 5 seconds
-    updateCheckInterval = setInterval(checkForLiveUpdates, 5000);
+    // Fallback polling for browsers without BroadcastChannel support
+    const updateCheckInterval = setInterval(checkForLiveUpdates, 5000);
 
     // Update indicator status
     const updateIndicator = document.getElementById('updateIndicator');
     if (updateIndicator) {
-        updateIndicator.querySelector('.update-text').textContent = 'Live Updates Active';
+        updateIndicator.querySelector('.update-text').textContent = 'Live Updates Active (Polling)';
         updateIndicator.style.opacity = '1';
     }
 
-    console.log('🔄 Live update checking started - checking every 5 seconds');
+    console.log('🔄 Live update checking started - checking every 5 seconds (fallback mode)');
 }
 
 function stopLiveUpdateChecking() {
-    if (updateCheckInterval) {
-        clearInterval(updateCheckInterval);
-        updateCheckInterval = null;
-        console.log('⏹️ Live update checking stopped');
+    // Close BroadcastChannel if open
+    if (collabChannel) {
+        collabChannel.close();
+        collabChannel = null;
+        console.log('⏹️ Live collaboration stopped (BroadcastChannel closed)');
     }
 }
 
 async function checkForLiveUpdates() {
-    if (isCheckingForUpdates) return; // Prevent overlapping checks
-
     try {
-        isCheckingForUpdates = true;
-        const currentTime = Date.now();
+        const mySessionId = getSessionId();
 
-        // Simulate checking for updates from other users
-        // In a real system, this would check a shared backend/database
+        // Check for updates from other sessions
         const hasUpdates = await simulateUpdateCheck();
 
         if (hasUpdates) {
             await handleLiveUpdates();
         }
 
-        lastUpdateCheck = currentTime;
-
     } catch (error) {
         console.warn('Update check failed:', error);
-    } finally {
-        isCheckingForUpdates = false;
     }
 }
 
@@ -1138,20 +1255,65 @@ async function handleLiveUpdates() {
     updateCollaborationStatus('updating');
 
     // Show update notification
-    showUpdateNotification();
+    showUpdateNotification('🔄 Loading updates from collaborators...');
 
-    // In a real system, this would:
-    // 1. Fetch the latest data from shared storage
-    // 2. Merge changes intelligently (avoiding conflicts)
-    // 3. Update the UI to reflect new changes
+    console.log('🔄 Updates detected from other users - merging data');
 
-    console.log('🔄 Updates detected from other users - refreshing data');
+    try {
+        const mySessionId = getSessionId();
+        const allSessions = getAllKnownSessions();
 
-    // Simulate update delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+        // Find the most recent session data
+        let mostRecentData = null;
+        let mostRecentTimestamp = parseInt(localStorage.getItem('phateGalleryLastModified') || '0');
 
-    // Update stats and UI
-    updateStats();
+        for (const sessionId of allSessions) {
+            if (sessionId !== mySessionId) {
+                const otherTimestamp = parseInt(localStorage.getItem(`phateGallery_${sessionId}_lastModified`) || '0');
+                if (otherTimestamp > mostRecentTimestamp) {
+                    const otherDataStr = localStorage.getItem(`phateGallery_${sessionId}_data`);
+                    if (otherDataStr) {
+                        mostRecentData = JSON.parse(otherDataStr);
+                        mostRecentTimestamp = otherTimestamp;
+                    }
+                }
+            }
+        }
+
+        // Merge the most recent data if found
+        if (mostRecentData) {
+            isUpdatingFromRemote = true;
+
+            // Merge data with simple last-write-wins strategy
+            labels = { ...labels, ...mostRecentData.labels };
+            annotations = {
+                density: { ...annotations.density, ...mostRecentData.annotations.density },
+                quality: { ...annotations.quality, ...mostRecentData.annotations.quality }
+            };
+            notes = { ...notes, ...mostRecentData.notes };
+            flagged = new Set([...flagged, ...mostRecentData.flagged]);
+            datasetRunIndex = { ...datasetRunIndex, ...mostRecentData.datasetRunIndex };
+
+            // Save merged data to localStorage
+            localStorage.setItem('phateGalleryLabels', JSON.stringify(labels));
+            localStorage.setItem('phateGalleryAnnotations', JSON.stringify(annotations));
+            localStorage.setItem('phateGalleryNotes', JSON.stringify(notes));
+            localStorage.setItem('phateGalleryFlagged', JSON.stringify(Array.from(flagged)));
+            localStorage.setItem('phateGalleryRunIndex', JSON.stringify(datasetRunIndex));
+            localStorage.setItem('phateGalleryLastModified', mostRecentTimestamp.toString());
+
+            // Update the UI to reflect changes
+            updateStats();
+            renderGallery();
+
+            isUpdatingFromRemote = false;
+            console.log('✅ Successfully merged remote changes (fallback mode)');
+        }
+
+    } catch (error) {
+        console.error('Error handling live updates:', error);
+        isUpdatingFromRemote = false;
+    }
 
     // Reset status
     setTimeout(() => {
@@ -1159,38 +1321,54 @@ async function handleLiveUpdates() {
     }, 2000);
 }
 
-function showUpdateNotification() {
-    // Create update notification
-    let notification = document.getElementById('update-notification');
-    if (!notification) {
-        notification = document.createElement('div');
-        notification.id = 'update-notification';
-        notification.style.cssText = `
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            background: #3b82f6;
-            color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            z-index: 1001;
-            transition: all 0.3s ease;
-            pointer-events: none;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        `;
-        document.body.appendChild(notification);
+function showUpdateNotification(message = '🔄 Updates from collaborators detected') {
+    // Remove existing notification to avoid duplicates
+    const existing = document.getElementById('update-notification');
+    if (existing) {
+        existing.remove();
     }
 
-    notification.innerHTML = '🔄 Updates from collaborators detected';
-    notification.style.opacity = '1';
-    notification.style.transform = 'translateX(0)';
+    // Create update notification
+    const notification = document.createElement('div');
+    notification.id = 'update-notification';
+    notification.style.cssText = `
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        background: #10b981;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        z-index: 1001;
+        transition: all 0.3s ease;
+        pointer-events: none;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        transform: translateX(100%);
+        opacity: 0;
+    `;
+    document.body.appendChild(notification);
 
-    // Fade out after 4 seconds
+    notification.innerHTML = message;
+
+    // Animate in
     setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 300);
+        }
     }, 4000);
 }
 
@@ -1210,18 +1388,12 @@ document.addEventListener('keydown', (e) => {
 // Handle page visibility changes for live collaboration
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-        // Page is hidden, reduce update frequency
-        if (updateCheckInterval) {
-            clearInterval(updateCheckInterval);
-            updateCheckInterval = setInterval(checkForLiveUpdates, 30000); // Check every 30 seconds when hidden
-        }
+        console.log('📱 Page hidden - collaboration continues via BroadcastChannel');
     } else {
-        // Page is visible, resume normal update frequency
-        if (updateCheckInterval) {
-            clearInterval(updateCheckInterval);
-            updateCheckInterval = setInterval(checkForLiveUpdates, 5000); // Check every 5 seconds when active
+        console.log('👀 Page visible - checking for any missed updates');
+        // Check for updates when returning to page (fallback only)
+        if (!collabChannel) {
+            setTimeout(checkForLiveUpdates, 1000);
         }
-        // Check immediately when returning to page
-        setTimeout(checkForLiveUpdates, 1000);
     }
 });

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Collaboration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .container { max-width: 800px; }
+        .test-box { border: 2px solid #007bff; padding: 20px; margin: 20px 0; border-radius: 8px; background: #f8f9fa; }
+        .success { border-color: #28a745; background: #d4edda; }
+        .error { border-color: #dc3545; background: #f8d7da; }
+        button { padding: 10px 20px; margin: 10px 5px; border: none; border-radius: 4px; background: #007bff; color: white; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .logs { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 15px; font-family: monospace; background: white; }
+        .meta { font-size: 0.9em; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Simple Cross-Tab Test</h1>
+
+        <div class="test-box">
+            <h3>📋 Instructions</h3>
+            <ol>
+                <li><strong>Open this page in a second tab/window</strong></li>
+                <li>Click "Add Test Data" in this tab</li>
+                <li>Check if the other tab shows the update</li>
+                <li>Try the reverse (add data in the other tab)</li>
+            </ol>
+        </div>
+
+        <div class="test-box">
+            <h3>📊 Status</h3>
+            <div id="status">Initializing...</div>
+        </div>
+
+        <div class="test-box">
+            <h3>🎮 Controls</h3>
+            <button onclick="addTestData()">Add Test Data</button>
+            <button onclick="clearData()">Clear All Data</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div class="test-box">
+            <h3>📜 Activity Log</h3>
+            <div id="logs" class="logs">Starting up...<br></div>
+        </div>
+    </div>
+
+    <script>
+        let channel = null;
+        let mySessionId = null;
+        let testData = {};
+
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = { info: '#007bff', success: '#28a745', error: '#dc3545', warn: '#ffc107' };
+            const color = colors[type] || colors.info;
+
+            logs.innerHTML += `<span style="color: ${color};">[${timestamp}] ${message}</span><br>`;
+            logs.scrollTop = logs.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+
+        function updateStatus() {
+            const status = document.getElementById('status');
+            const dataCount = Object.keys(testData).length;
+
+            status.innerHTML = `
+                <div><strong>Session ID:</strong> <code>${mySessionId || 'Not set'}</code></div>
+                <div><strong>BroadcastChannel:</strong> ${channel ? '✅ Active' : '❌ Inactive'}</div>
+                <div><strong>Data Items:</strong> ${dataCount}</div>
+                <div><strong>Browser:</strong> ${navigator.userAgent.split(' ')[0]}</div>
+                <div class="meta">Last update: ${new Date().toLocaleTimeString()}</div>
+            `;
+        }
+
+        function initializeTest() {
+            // Generate unique session ID
+            mySessionId = 'test_' + Math.random().toString(36).substr(2, 8);
+            log(`🚀 Initializing session: ${mySessionId}`, 'info');
+
+            // Check BroadcastChannel support
+            if (typeof BroadcastChannel === 'undefined') {
+                log('❌ BroadcastChannel not supported in this browser', 'error');
+                updateStatus();
+                return;
+            }
+
+            // Initialize BroadcastChannel
+            try {
+                channel = new BroadcastChannel('test-collaboration-channel');
+                log('✅ BroadcastChannel created successfully', 'success');
+
+                // Set up message handler
+                channel.onmessage = (event) => {
+                    const data = event.data;
+                    log(`📩 Received: ${JSON.stringify(data)}`, 'info');
+
+                    // Ignore messages from ourselves
+                    if (data.sessionId === mySessionId) {
+                        log('⏭️ Ignoring own message', 'info');
+                        return;
+                    }
+
+                    // Handle data updates
+                    if (data.type === 'DATA_UPDATE') {
+                        // Merge the data
+                        testData = { ...testData, ...data.payload };
+
+                        // Save to localStorage
+                        localStorage.setItem('testData', JSON.stringify(testData));
+
+                        log(`✅ Merged data from ${data.sessionId}`, 'success');
+                        updateStatus();
+                    }
+                };
+
+                channel.onerror = (error) => {
+                    log(`❌ Channel error: ${error}`, 'error');
+                };
+
+                log('👂 Listening for messages from other tabs...', 'info');
+
+            } catch (error) {
+                log(`❌ Failed to create BroadcastChannel: ${error.message}`, 'error');
+                updateStatus();
+                return;
+            }
+
+            // Load existing data
+            const existingData = localStorage.getItem('testData');
+            if (existingData) {
+                try {
+                    testData = JSON.parse(existingData);
+                    log(`📁 Loaded ${Object.keys(testData).length} existing items`, 'info');
+                } catch (e) {
+                    log(`⚠️ Error loading existing data: ${e.message}`, 'warn');
+                }
+            }
+
+            updateStatus();
+            log('🎉 Initialization complete!', 'success');
+        }
+
+        function addTestData() {
+            if (!channel) {
+                log('❌ No active channel to broadcast on', 'error');
+                return;
+            }
+
+            // Create test data
+            const itemId = 'item_' + Math.random().toString(36).substr(2, 6);
+            const itemValue = `Data from ${mySessionId} at ${new Date().toLocaleTimeString()}`;
+
+            // Add to local data
+            testData[itemId] = itemValue;
+
+            // Save to localStorage
+            localStorage.setItem('testData', JSON.stringify(testData));
+
+            log(`💾 Added local data: ${itemId}`, 'success');
+
+            // Broadcast to other tabs
+            const message = {
+                type: 'DATA_UPDATE',
+                sessionId: mySessionId,
+                timestamp: Date.now(),
+                payload: { [itemId]: itemValue }
+            };
+
+            try {
+                channel.postMessage(message);
+                log(`📤 Broadcasted: ${itemId} = "${itemValue}"`, 'success');
+            } catch (error) {
+                log(`❌ Failed to broadcast: ${error.message}`, 'error');
+            }
+
+            updateStatus();
+        }
+
+        function clearData() {
+            testData = {};
+            localStorage.removeItem('testData');
+            log('🧹 Cleared all data', 'info');
+            updateStatus();
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🌟 Page loaded, starting test...', 'info');
+            initializeTest();
+        });
+
+        // Cleanup when page unloads
+        window.addEventListener('beforeunload', () => {
+            if (channel) {
+                channel.close();
+            }
+        });
+    </script>
+</body>
+</html>
