@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import DatasetCard from './DatasetCard';
+import ModernDatasetCard from './ModernDatasetCard';
 
 const Gallery = () => {
   const { state } = useAppContext();
@@ -87,7 +87,7 @@ const Gallery = () => {
   return (
     <div className="gallery">
       {datasetEntries.map(([dataset, runs]) => (
-        <DatasetCard
+        <ModernDatasetCard
           key={dataset}
           dataset={dataset}
           runs={runs}
